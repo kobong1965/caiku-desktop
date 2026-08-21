@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>裁库交互说明</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #edf0ed; color: #101411; font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif; }
+    body { width: 2000px; height: 1420px; padding: 64px; }
+    header { display: flex; align-items: end; justify-content: space-between; padding-bottom: 38px; border-bottom: 2px solid #cbd1cc; }
+    .eyebrow { color: #557067; font: 700 18px/1 "Bahnschrift", sans-serif; letter-spacing: .16em; }
+    h1 { margin: 16px 0 0; font-size: 50px; letter-spacing: -.04em; }
+    .lock { padding: 14px 22px; border: 1px solid #9bcbb9; border-radius: 999px; background: #e2faf1; color: #155b43; font-size: 20px; font-weight: 800; }
+    .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 38px; }
+    .step { position: relative; min-height: 150px; padding: 24px; border: 1px solid #d3d9d4; border-radius: 20px; background: #fff; }
+    .step:not(:last-child)::after { content: "→"; position: absolute; right: -18px; top: 59px; z-index: 2; width: 20px; color: #688078; font-size: 24px; font-weight: 900; }
+    .n { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: #111512; color: #c9f5e7; font: 700 16px/1 "Bahnschrift", sans-serif; }
+    h2 { margin: 16px 0 8px; font-size: 23px; }
+    .step p, .note { margin: 0; color: #58645d; font-size: 17px; line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: 1.18fr .82fr; gap: 24px; margin-top: 24px; }
+    .panel { padding: 30px; border: 1px solid #d3d9d4; border-radius: 24px; background: #fff; }
+    .panel-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+    .panel-title h2 { margin: 0; font-size: 28px; }
+    .tag { padding: 8px 12px; border-radius: 999px; background: #eef2ef; color: #4b5851; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; font-size: 18px; }
+    th { padding: 14px; background: #f1f4f2; text-align: left; }
+    td { padding: 15px 14px; border-bottom: 1px solid #e1e5e2; vertical-align: top; }
+    .pass { color: #147a59; font-weight: 800; }
+    .block { color: #b94532; font-weight: 800; }
+    .states { display: grid; gap: 12px; }
+    .state { display: grid; grid-template-columns: 130px 1fr; gap: 16px; align-items: center; padding: 17px 18px; border-radius: 16px; background: #f4f6f4; }
+    .state strong { font-size: 18px; }
+    .state span { color: #58645d; font-size: 17px; line-height: 1.45; }
+    .mint { border-left: 6px solid #58c4a3; }
+    .amber { border-left: 6px solid #edb64f; }
+    .red { border-left: 6px solid #e0604b; }
+    .black { border-left: 6px solid #111512; }
+    .principles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 24px; }
+    .principle { padding: 22px; border-radius: 18px; background: #101411; color: #fff; }
+    .principle b { display: block; margin-bottom: 9px; color: #c9f5e7; font-size: 19px; }
+    .principle span { color: #d9dfdb; font-size: 16px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <header>
+    <div><div class="eyebrow">INTERACTION & QUALITY GATE SPEC · 2026</div><h1>裁库｜交互状态与 AI 发布门禁</h1></div>
+    <div class="lock">出口唯一：AI 质检通过 → 1080×1920 / 9:16</div>
+  </header>
+
+  <section class="flow">
+    <article class="step"><span class="n">1</span><h2>选择素材</h2><p>按商品与镜头意图筛选；每段时长 ≥ 2 秒；所有素材都可删除。</p></article>
+    <article class="step"><span class="n">2</span><h2>选择脚本</h2><p>绑定商品卖点；生成前完成极限词、违禁词与平台词检查。</p></article>
+    <article class="step"><span class="n">3</span><h2>AI 配音</h2><p>选择声音与音乐；校验口播、字幕和脚本是否逐句一致。</p></article>
+    <article class="step"><span class="n">4</span><h2>批量混剪</h2><p>设置 1–20 条；通过素材顺序、开头、音乐点与字幕布局做差异化。</p></article>
+    <article class="step"><span class="n">5</span><h2>逐条 AI 质检</h2><p>每个成片单独出报告；风险项必须修复后才能进入导出。</p></article>
+  </section>
+
+  <section class="grid">
+    <article class="panel">
+      <div class="panel-title"><h2>逐条质检矩阵</h2><span class="tag">多模态 + 规则引擎</span></div>
+      <table>
+        <thead><tr><th>检查项</th><th>通过条件</th><th>失败行为</th></tr></thead>
+        <tbody>
+          <tr><td><b>画面 × 文案</b></td><td>颜色、款式、面料、动作、场景与口播描述一致</td><td class="block">定位冲突时间码，禁止导出</td></tr>
+          <tr><td><b>口播 × 字幕</b></td><td>句子、数字、停顿和商品名一致，无漏字错字</td><td class="block">标记错句并触发重配音/改字幕</td></tr>
+          <tr><td><b>极限词/违禁词</b></td><td>无绝对化承诺、虚假功效、价格误导和敏感表达</td><td class="block">提供替换建议，重新检查</td></tr>
+          <tr><td><b>抖音投放适配</b></td><td>平台词、商品卡承接、画面安全区与技术参数合格</td><td class="block">保持拦截，不能加入导出队列</td></tr>
+          <tr><td><b>素材时长</b></td><td>所有拆分片段 ≥ 2 秒，来源与款号可追溯</td><td class="block">回退素材选择，提示替换</td></tr>
+          <tr><td><b>导出规格</b></td><td class="pass">1080×1920、9:16、MP4、H.264、30 fps、AAC 48 kHz</td><td class="block">规格固定，不提供错误选项</td></tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article class="panel">
+      <div class="panel-title"><h2>关键交互状态</h2><span class="tag">可恢复</span></div>
+      <div class="states">
+        <div class="state black"><strong>未就绪</strong><span>主按钮禁用，并在右侧门禁中明确缺少素材、脚本、声音或数量。</span></div>
+        <div class="state amber"><strong>生成中</strong><span>锁定输入，展示已完成数量、剩余时间和当前处理环节。</span></div>
+        <div class="state amber"><strong>需修复</strong><span>风险卡显示问题类型、时间码与修复入口；导出按钮保持拦截。</span></div>
+        <div class="state mint"><strong>已通过</strong><span>四项质检全部为绿色，允许进入统一导出队列。</span></div>
+        <div class="state red"><strong>删除</strong><span>素材、脚本、声音、音乐、任务和成片均有独立删除；弹窗说明影响范围。</span></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="principles">
+    <div class="principle"><b>第一性原则 01</b><span>不是“能生成就行”，而是“来源清楚、内容对得上、发布前可证明合规”。</span></div>
+    <div class="principle"><b>第一性原则 02</b><span>四大模块共享同一款号、素材来源、脚本版本与质检记录。</span></div>
+    <div class="principle"><b>第一性原则 03</b><span>批量生成不能稀释质量标准，每一个视频都必须独立检查。</span></div>
+    <div class="principle"><b>第一性原则 04</b><span>软件给出风险辅助判断；最终投放仍保留人工复核与平台审核责任。</span></div>
+  </section>
+</body>
+</html>

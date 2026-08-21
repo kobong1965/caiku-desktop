@@ -1,0 +1,29 @@
+# Dependencies and build outputs
+node_modules/
+release/
+output/
+.playwright-cli/
+
+# Generated media and local experiments
+_视频分析临时/
+_ai_editor_engine_test/
+*.log
+*.tmp
+
+# Local secrets and user state
+.env
+.env.*
+!.env.example
+caiku-state.json
+*secret*
+*credentials*
+
+# Bundled third-party binaries (included in Release installers)
+vendor/ffmpeg/*.exe
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

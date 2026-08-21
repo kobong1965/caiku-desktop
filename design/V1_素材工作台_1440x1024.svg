@@ -1,0 +1,380 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1024" viewBox="0 0 1440 1024">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#111111" flood-opacity="0.07"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="7" flood-color="#111111" flood-opacity="0.06"/>
+    </filter>
+    <linearGradient id="thumbOne" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E1F6EF"/>
+      <stop offset="1" stop-color="#B9CEC7"/>
+    </linearGradient>
+    <linearGradient id="thumbTwo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ECEAE2"/>
+      <stop offset="1" stop-color="#D1CEC3"/>
+    </linearGradient>
+    <linearGradient id="thumbThree" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#DBE0E4"/>
+      <stop offset="1" stop-color="#B9C0C6"/>
+    </linearGradient>
+    <style>
+      .ui { font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif; fill: #111111; }
+      .display { font-family: "Segoe UI Variable Display", "Microsoft YaHei UI", sans-serif; fill: #111111; font-weight: 650; }
+      .label { font-size: 14px; font-weight: 600; }
+      .body { font-size: 13px; font-weight: 400; }
+      .micro { font-size: 11px; font-weight: 500; letter-spacing: .2px; }
+      .inverse { fill: #FFFFFF !important; }
+      .muted { fill: #6B6B68; }
+      .line { stroke: #E4E5E0; stroke-width: 1; }
+      .icon { fill: none; stroke: #111111; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+      .card { fill: #FFFFFF; stroke: #E4E5E0; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="1024" fill="#ECEDE9"/>
+  <rect x="14" y="14" width="1412" height="996" rx="26" fill="#FFFFFF" filter="url(#shadow)"/>
+
+  <!-- Sidebar -->
+  <g id="sidebar">
+    <rect x="14" y="14" width="98" height="996" rx="26" fill="#FAFAF8"/>
+    <line x1="112" y1="34" x2="112" y2="990" class="line"/>
+    <g id="logo">
+      <rect x="33" y="31" width="60" height="48" rx="15" fill="#111111"/>
+      <circle cx="53" cy="55" r="8" fill="#C9F4E7"/>
+      <path d="M51 49.5v11M55 49.5v11" stroke="#111111" stroke-width="2" stroke-linecap="round"/>
+      <text x="68" y="59" class="ui inverse" font-size="11" font-weight="700">库</text>
+    </g>
+
+    <g id="nav-overview">
+      <rect x="24" y="113" width="78" height="64" rx="15" fill="#111111"/>
+      <rect x="47" y="126" width="10" height="10" rx="2" fill="#FFFFFF"/>
+      <rect x="61" y="126" width="10" height="10" rx="2" fill="#FFFFFF" opacity=".55"/>
+      <rect x="47" y="140" width="10" height="10" rx="2" fill="#FFFFFF" opacity=".55"/>
+      <rect x="61" y="140" width="10" height="10" rx="2" fill="#C9F4E7"/>
+      <text x="63" y="166" class="ui micro inverse" text-anchor="middle">工作台</text>
+    </g>
+
+    <g id="nav-import" transform="translate(0 76)">
+      <path d="M49 124h25v24H49zM55 124v-5h13v5M56 136h11M61.5 130.5v11" class="icon"/>
+      <text x="62" y="166" class="ui micro muted" text-anchor="middle">入库</text>
+    </g>
+    <g id="nav-classify" transform="translate(0 150)">
+      <rect x="48" y="121" width="12" height="12" rx="3" class="icon"/>
+      <rect x="64" y="121" width="12" height="12" rx="3" class="icon"/>
+      <rect x="48" y="137" width="12" height="12" rx="3" class="icon"/>
+      <rect x="64" y="137" width="12" height="12" rx="3" class="icon"/>
+      <text x="62" y="166" class="ui micro muted" text-anchor="middle">分类</text>
+    </g>
+    <g id="nav-caption" transform="translate(0 224)">
+      <rect x="47" y="122" width="30" height="22" rx="5" class="icon"/>
+      <path d="M52 130h12M52 136h19" class="icon"/>
+      <text x="62" y="166" class="ui micro muted" text-anchor="middle">去字幕</text>
+    </g>
+    <g id="nav-mix" transform="translate(0 298)">
+      <path d="M48 127h27M48 139h27M54 122v10M67 134v10" class="icon"/>
+      <circle cx="54" cy="127" r="3.5" fill="#FFFFFF" stroke="#111111" stroke-width="1.6"/>
+      <circle cx="67" cy="139" r="3.5" fill="#FFFFFF" stroke="#111111" stroke-width="1.6"/>
+      <text x="62" y="166" class="ui micro muted" text-anchor="middle">混剪</text>
+    </g>
+    <g id="nav-export" transform="translate(0 372)">
+      <path d="M49 143h26v-15H49zM62 139v-21M56 124l6-6 6 6" class="icon"/>
+      <text x="62" y="166" class="ui micro muted" text-anchor="middle">导出</text>
+    </g>
+
+    <g id="nav-settings" transform="translate(0 748)">
+      <circle cx="62" cy="132" r="10" class="icon"/>
+      <circle cx="62" cy="132" r="3" class="icon"/>
+      <path d="M62 117v4M62 143v4M47 132h4M73 132h4M51.5 121.5l3 3M69.5 139.5l3 3M72.5 121.5l-3 3M54.5 139.5l-3 3" class="icon"/>
+      <text x="62" y="166" class="ui micro muted" text-anchor="middle">设置</text>
+    </g>
+  </g>
+
+  <!-- Top bar -->
+  <g id="topbar">
+    <line x1="136" y1="98" x2="1398" y2="98" class="line"/>
+    <text x="138" y="50" class="display" font-size="21">FRAMECUT</text>
+    <text x="138" y="71" class="ui micro muted">本地视频素材工作站</text>
+
+    <g id="global-search">
+      <rect x="505" y="31" width="398" height="48" rx="24" fill="#F5F5F2"/>
+      <circle cx="530" cy="54" r="7" class="icon"/>
+      <path d="M535 59l5 5" class="icon"/>
+      <text x="552" y="60" class="ui body muted">搜索款号、批次或素材</text>
+      <rect x="851" y="43" width="35" height="24" rx="12" fill="#FFFFFF" stroke="#E4E5E0"/>
+      <text x="869" y="59" class="ui micro muted" text-anchor="middle">⌘ K</text>
+    </g>
+
+    <g id="storage-pill">
+      <rect x="1045" y="31" width="154" height="48" rx="24" fill="#FFFFFF" stroke="#E4E5E0"/>
+      <circle cx="1070" cy="55" r="12" fill="#C9F4E7"/>
+      <path d="M1064 58h12M1066 53h8" class="icon"/>
+      <text x="1089" y="51" class="ui micro muted">素材盘</text>
+      <text x="1089" y="67" class="ui body" font-weight="650">1.36 TB 可用</text>
+    </g>
+
+    <g id="notification">
+      <circle cx="1232" cy="55" r="24" fill="#F5F5F2"/>
+      <path d="M1225 61h14l-2-3v-6a5 5 0 0 0-10 0v6zM1230 65h4" class="icon"/>
+      <circle cx="1243" cy="43" r="5" fill="#D94C45" stroke="#FFFFFF" stroke-width="2"/>
+    </g>
+    <g id="profile">
+      <circle cx="1289" cy="55" r="23" fill="#111111"/>
+      <text x="1289" y="61" class="ui inverse" font-size="14" font-weight="700" text-anchor="middle">剪</text>
+      <text x="1321" y="51" class="ui label">本地工作区</text>
+      <text x="1321" y="68" class="ui micro muted">单机模式</text>
+      <path d="M1381 52l6 6 6-6" class="icon"/>
+    </g>
+  </g>
+
+  <!-- Page heading -->
+  <g id="page-heading">
+    <text x="138" y="141" class="display" font-size="29">素材工作台</text>
+    <text x="138" y="166" class="ui body muted">8 月 17 日 · 当前批次处理稳定，2 个片段需要检查</text>
+    <g id="batch-selector">
+      <rect x="915" y="121" width="250" height="50" rx="14" fill="#F5F5F2"/>
+      <text x="935" y="142" class="ui micro muted">当前款号 / 批次</text>
+      <text x="935" y="160" class="ui body" font-weight="650">S2026-08 · 神裤测评 01</text>
+      <path d="M1138 143l6 6 6-6" class="icon"/>
+    </g>
+    <g id="import-button">
+      <rect x="1179" y="121" width="217" height="50" rx="14" fill="#111111"/>
+      <path d="M1203 145h16M1211 137v16" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+      <text x="1289" y="152" class="ui label inverse" text-anchor="middle">导入新视频</text>
+    </g>
+  </g>
+
+  <!-- Batch overview card -->
+  <g id="batch-overview" filter="url(#softShadow)">
+    <rect x="138" y="194" width="350" height="286" rx="20" class="card"/>
+    <clipPath id="heroClip"><rect x="154" y="210" width="318" height="169" rx="15"/></clipPath>
+    <g clip-path="url(#heroClip)">
+      <rect x="154" y="210" width="318" height="169" fill="url(#thumbOne)"/>
+      <circle cx="209" cy="250" r="54" fill="#FFFFFF" opacity=".45"/>
+      <circle cx="429" cy="343" r="92" fill="#111111" opacity=".07"/>
+      <path d="M285 239c10-18 26-27 43-27s33 9 43 27l-13 37-9-12-3 93h-77l-3-93-9 12z" fill="#171717"/>
+      <path d="M302 357l-12 39h31l11-39M343 357l11 39h31l-12-39" fill="#202020"/>
+      <rect x="169" y="225" width="74" height="25" rx="12.5" fill="#FFFFFF" opacity=".92"/>
+      <circle cx="183" cy="237.5" r="4" fill="#2E8B72"/>
+      <text x="194" y="242" class="ui micro">正在处理</text>
+      <rect x="391" y="334" width="65" height="28" rx="14" fill="#FFFFFF" opacity=".92"/>
+      <path d="M410 342l9 6-9 6z" fill="#111111"/>
+      <text x="426" y="352" class="ui micro">预览</text>
+    </g>
+    <text x="158" y="407" class="ui micro muted">当前批次</text>
+    <text x="158" y="431" class="ui" font-size="17" font-weight="650">神裤测评 · 批次 01</text>
+    <text x="158" y="454" class="ui body muted">2 个原视频 · 4K · 创建于 00:18</text>
+    <rect x="386" y="407" width="69" height="27" rx="13.5" fill="#C9F4E7"/>
+    <text x="420.5" y="425" class="ui micro" text-anchor="middle">72% 完成</text>
+    <rect x="158" y="465" width="297" height="5" rx="2.5" fill="#ECEDE9"/>
+    <rect x="158" y="465" width="214" height="5" rx="2.5" fill="#111111"/>
+  </g>
+
+  <!-- Processing card with signature filmstrip rail -->
+  <g id="processing-queue" filter="url(#softShadow)">
+    <rect x="504" y="194" width="514" height="286" rx="20" class="card"/>
+    <text x="526" y="226" class="ui label">处理队列</text>
+    <text x="526" y="248" class="ui body muted">系统正在去除第 2 个视频的原字幕</text>
+    <rect x="916" y="212" width="79" height="28" rx="14" fill="#F5F5F2"/>
+    <text x="955.5" y="231" class="ui micro" text-anchor="middle">1 个任务</text>
+
+    <g id="filmstrip-progress">
+      <path d="M551 306H967" stroke="#DADBD6" stroke-width="7" stroke-linecap="round"/>
+      <path d="M551 306H768" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
+      <path d="M768 306H836" stroke="#C9F4E7" stroke-width="7" stroke-linecap="round"/>
+      <g>
+        <circle cx="551" cy="306" r="15" fill="#111111"/>
+        <path d="M544 306l5 5 9-10" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="655" cy="306" r="15" fill="#111111"/>
+        <path d="M648 306l5 5 9-10" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="768" cy="306" r="18" fill="#C9F4E7" stroke="#111111" stroke-width="2"/>
+        <circle cx="768" cy="306" r="5" fill="#111111"/>
+        <circle cx="872" cy="306" r="15" fill="#FFFFFF" stroke="#DADBD6" stroke-width="2"/>
+        <circle cx="967" cy="306" r="15" fill="#FFFFFF" stroke="#DADBD6" stroke-width="2"/>
+      </g>
+      <text x="551" y="341" class="ui micro" text-anchor="middle">分析</text>
+      <text x="655" y="341" class="ui micro" text-anchor="middle">切分</text>
+      <text x="768" y="341" class="ui micro" text-anchor="middle">去字幕</text>
+      <text x="872" y="341" class="ui micro muted" text-anchor="middle">分类</text>
+      <text x="967" y="341" class="ui micro muted" text-anchor="middle">归档</text>
+    </g>
+
+    <rect x="526" y="372" width="470" height="84" rx="14" fill="#F7F7F4"/>
+    <circle cx="553" cy="400" r="11" fill="#C9F4E7"/>
+    <path d="M549 400l3 3 6-7" class="icon"/>
+    <text x="574" y="405" class="ui body" font-weight="650">视频 1 已完成</text>
+    <text x="908" y="405" class="ui micro muted">54.14 秒</text>
+    <circle cx="553" cy="433" r="11" fill="#111111"/>
+    <path d="M553 426v7l5 3" stroke="#FFFFFF" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+    <text x="574" y="438" class="ui body" font-weight="650">视频 2 · 去字幕中</text>
+    <text x="908" y="438" class="ui micro">预计 01:26</text>
+  </g>
+
+  <!-- Category distribution -->
+  <g id="category-distribution" filter="url(#softShadow)">
+    <rect x="1034" y="194" width="362" height="286" rx="20" class="card"/>
+    <text x="1057" y="226" class="ui label">素材分类</text>
+    <text x="1057" y="248" class="ui body muted">可用片段的内容分布</text>
+    <g transform="translate(0 2)">
+      <circle cx="1133" cy="338" r="62" fill="none" stroke="#EEEFEA" stroke-width="18"/>
+      <circle cx="1133" cy="338" r="62" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round" stroke-dasharray="150 240" transform="rotate(-90 1133 338)"/>
+      <circle cx="1133" cy="338" r="62" fill="none" stroke="#79CBB4" stroke-width="18" stroke-linecap="round" stroke-dasharray="78 312" stroke-dashoffset="-158" transform="rotate(-90 1133 338)"/>
+      <circle cx="1133" cy="338" r="62" fill="none" stroke="#B8BBB4" stroke-width="18" stroke-linecap="round" stroke-dasharray="51 339" stroke-dashoffset="-244" transform="rotate(-90 1133 338)"/>
+      <text x="1133" y="334" class="display" font-size="30" text-anchor="middle">128</text>
+      <text x="1133" y="355" class="ui micro muted" text-anchor="middle">可用片段</text>
+    </g>
+    <g id="category-legend">
+      <circle cx="1232" cy="292" r="5" fill="#111111"/><text x="1247" y="297" class="ui body">人物穿搭</text><text x="1368" y="297" class="ui micro muted" text-anchor="end">49 · 38%</text>
+      <circle cx="1232" cy="327" r="5" fill="#79CBB4"/><text x="1247" y="332" class="ui body">细节讲解</text><text x="1368" y="332" class="ui micro muted" text-anchor="end">31 · 24%</text>
+      <circle cx="1232" cy="362" r="5" fill="#B8BBB4"/><text x="1247" y="367" class="ui body">测评对比</text><text x="1368" y="367" class="ui micro muted" text-anchor="end">26 · 20%</text>
+      <circle cx="1232" cy="397" r="5" fill="#E4E5E0"/><text x="1247" y="402" class="ui body">其他素材</text><text x="1368" y="402" class="ui micro muted" text-anchor="end">22 · 18%</text>
+    </g>
+    <rect x="1057" y="438" width="311" height="1" fill="#E4E5E0"/>
+    <text x="1057" y="462" class="ui micro muted">自动分类平均置信度</text>
+    <text x="1368" y="462" class="ui body" font-weight="650" text-anchor="end">92.4%</text>
+  </g>
+
+  <!-- Metrics -->
+  <g id="metric-clips" filter="url(#softShadow)">
+    <rect x="138" y="496" width="170" height="152" rx="20" class="card"/>
+    <text x="159" y="526" class="ui micro muted">可用片段</text>
+    <text x="159" y="574" class="display" font-size="36">128</text>
+    <rect x="159" y="594" width="75" height="25" rx="12.5" fill="#C9F4E7"/>
+    <text x="196.5" y="611" class="ui micro" text-anchor="middle">+16 新增</text>
+    <text x="159" y="635" class="ui micro muted">2 个待检查</text>
+  </g>
+  <g id="metric-duration" filter="url(#softShadow)">
+    <rect x="322" y="496" width="166" height="152" rx="20" class="card"/>
+    <text x="343" y="526" class="ui micro muted">素材总时长</text>
+    <text x="343" y="574" class="display" font-size="33">18:42</text>
+    <text x="343" y="602" class="ui body">分钟</text>
+    <text x="343" y="635" class="ui micro muted">平均 8.8 秒 / 片段</text>
+  </g>
+
+  <!-- Duration rule -->
+  <g id="duration-rule" filter="url(#softShadow)">
+    <rect x="504" y="496" width="514" height="152" rx="20" fill="#F4FCF9" stroke="#CBE9E0"/>
+    <g transform="translate(526 518)">
+      <circle cx="42" cy="52" r="42" fill="#FFFFFF" stroke="#111111" stroke-width="2"/>
+      <path d="M42 19a33 33 0 1 1-23 9" fill="none" stroke="#79CBB4" stroke-width="7" stroke-linecap="round"/>
+      <text x="42" y="49" class="display" font-size="23" text-anchor="middle">2.0</text>
+      <text x="42" y="67" class="ui micro muted" text-anchor="middle">秒下限</text>
+    </g>
+    <text x="633" y="530" class="ui label">片段时长保护已开启</text>
+    <text x="633" y="553" class="ui body muted">不足 2 秒的片段不会进入正式素材库</text>
+    <g transform="translate(633 574)">
+      <rect width="103" height="48" rx="12" fill="#FFFFFF" stroke="#DCECE7"/>
+      <text x="13" y="19" class="ui micro muted">自动合并</text>
+      <text x="13" y="39" class="display" font-size="18">6 个</text>
+      <rect x="113" width="103" height="48" rx="12" fill="#FFFFFF" stroke="#DCECE7"/>
+      <text x="126" y="19" class="ui micro muted">标记不可用</text>
+      <text x="126" y="39" class="display" font-size="18">2 个</text>
+      <rect x="226" width="127" height="48" rx="12" fill="#111111"/>
+      <text x="289.5" y="29" class="ui body inverse" text-anchor="middle">检查问题片段 →</text>
+    </g>
+  </g>
+
+  <!-- Storage -->
+  <g id="storage-card" filter="url(#softShadow)">
+    <rect x="1034" y="496" width="362" height="152" rx="20" class="card"/>
+    <text x="1057" y="526" class="ui label">本地素材盘</text>
+    <text x="1057" y="550" class="ui body muted">D:\抖音素材库</text>
+    <text x="1057" y="590" class="display" font-size="24">2.64 TB</text>
+    <text x="1155" y="590" class="ui micro muted">/ 4.00 TB 已用</text>
+    <rect x="1057" y="607" width="311" height="8" rx="4" fill="#ECEDE9"/>
+    <rect x="1057" y="607" width="205" height="8" rx="4" fill="#111111"/>
+    <text x="1057" y="636" class="ui micro muted">视频 2.31 TB · 缓存 330 GB</text>
+    <text x="1368" y="636" class="ui micro" text-anchor="end">打开目录 ↗</text>
+  </g>
+
+  <!-- Recent media table -->
+  <g id="recent-media" filter="url(#softShadow)">
+    <rect x="138" y="664" width="880" height="320" rx="20" class="card"/>
+    <text x="160" y="698" class="ui label">最近素材</text>
+    <text x="160" y="720" class="ui body muted">已完成去字幕并通过 2 秒时长检查</text>
+    <rect x="880" y="684" width="115" height="34" rx="17" fill="#F5F5F2"/>
+    <text x="937.5" y="706" class="ui micro" text-anchor="middle">查看全部 128</text>
+
+    <g id="table-header">
+      <rect x="160" y="739" width="836" height="35" rx="9" fill="#F7F7F4"/>
+      <text x="175" y="761" class="ui micro muted">素材</text>
+      <text x="604" y="761" class="ui micro muted">分类</text>
+      <text x="732" y="761" class="ui micro muted">时长</text>
+      <text x="818" y="761" class="ui micro muted">置信度</text>
+      <text x="956" y="761" class="ui micro muted" text-anchor="end">状态</text>
+    </g>
+
+    <g id="media-row-1">
+      <rect x="160" y="783" width="836" height="57" rx="10" fill="#FFFFFF"/>
+      <rect x="170" y="790" width="68" height="43" rx="8" fill="url(#thumbOne)"/>
+      <path d="M193 798c4-6 9-9 13-9s10 3 13 9l-4 12-4-4-1 22h-9l-1-22-4 4z" fill="#111111" opacity=".85"/>
+      <text x="252" y="809" class="ui body" font-weight="650">黑 T 通勤正侧面</text>
+      <text x="252" y="828" class="ui micro muted">视频 1 · 00:07.32</text>
+      <rect x="596" y="797" width="92" height="27" rx="13.5" fill="#F1F2EF"/>
+      <text x="642" y="815" class="ui micro" text-anchor="middle">人物穿搭</text>
+      <text x="732" y="815" class="ui body">4.00s</text>
+      <text x="818" y="815" class="ui body">96%</text>
+      <circle cx="935" cy="810" r="5" fill="#2E8B72"/><text x="956" y="815" class="ui micro" text-anchor="end">可用</text>
+    </g>
+    <line x1="160" y1="843" x2="996" y2="843" class="line"/>
+
+    <g id="media-row-2">
+      <rect x="160" y="847" width="836" height="57" rx="10" fill="#FFFFFF"/>
+      <rect x="170" y="854" width="68" height="43" rx="8" fill="url(#thumbTwo)"/>
+      <path d="M194 862h22l-2 9 5 18h-10l-4-12-3 12h-11l6-18z" fill="#30302E" opacity=".8"/>
+      <text x="252" y="873" class="ui body" font-weight="650">面料与垂感近景</text>
+      <text x="252" y="892" class="ui micro muted">视频 1 · 00:20.68</text>
+      <rect x="596" y="861" width="92" height="27" rx="13.5" fill="#E8F7F2"/>
+      <text x="642" y="879" class="ui micro" text-anchor="middle">细节讲解</text>
+      <text x="732" y="879" class="ui body">2.58s</text>
+      <text x="818" y="879" class="ui body">94%</text>
+      <circle cx="935" cy="874" r="5" fill="#2E8B72"/><text x="956" y="879" class="ui micro" text-anchor="end">可用</text>
+    </g>
+    <line x1="160" y1="907" x2="996" y2="907" class="line"/>
+
+    <g id="media-row-3">
+      <rect x="160" y="911" width="836" height="57" rx="10" fill="#FFFFFF"/>
+      <rect x="170" y="918" width="68" height="43" rx="8" fill="url(#thumbThree)"/>
+      <path d="M190 952c2-15 8-26 14-26s13 11 15 26M205 926v26" fill="none" stroke="#202020" stroke-width="5" stroke-linecap="round"/>
+      <text x="252" y="937" class="ui body" font-weight="650">背面回转侧面展示</text>
+      <text x="252" y="956" class="ui micro muted">视频 2 · 00:12.30</text>
+      <rect x="596" y="925" width="92" height="27" rx="13.5" fill="#F1F2EF"/>
+      <text x="642" y="943" class="ui micro" text-anchor="middle">人物穿搭</text>
+      <text x="732" y="943" class="ui body">3.37s</text>
+      <text x="818" y="943" class="ui body">91%</text>
+      <circle cx="935" cy="938" r="5" fill="#2E8B72"/><text x="956" y="943" class="ui micro" text-anchor="end">可用</text>
+    </g>
+  </g>
+
+  <!-- Quick mix -->
+  <g id="quick-mix" filter="url(#softShadow)">
+    <rect x="1034" y="664" width="362" height="320" rx="20" class="card"/>
+    <text x="1057" y="698" class="ui label">快速开始混剪</text>
+    <text x="1057" y="720" class="ui body muted">素材准备完成后即可生成第一版</text>
+
+    <g id="mix-readiness">
+      <rect x="1057" y="746" width="311" height="56" rx="13" fill="#F7F7F4"/>
+      <circle cx="1084" cy="774" r="13" fill="#111111"/>
+      <text x="1084" y="779" class="ui micro inverse" text-anchor="middle">文</text>
+      <text x="1108" y="770" class="ui body" font-weight="650">脚本模板</text>
+      <text x="1108" y="789" class="ui micro muted">神裤测评 · 45 秒</text>
+      <path d="M1346 771l5 5-5 5" class="icon"/>
+
+      <rect x="1057" y="812" width="311" height="56" rx="13" fill="#F7F7F4"/>
+      <circle cx="1084" cy="840" r="13" fill="#C9F4E7"/>
+      <path d="M1081 834v12M1087 836v8M1075 837v6" class="icon"/>
+      <text x="1108" y="836" class="ui body" font-weight="650">配音</text>
+      <text x="1108" y="855" class="ui micro muted">自然女声 · 清晰</text>
+      <path d="M1346 837l5 5-5 5" class="icon"/>
+
+      <rect x="1057" y="878" width="311" height="56" rx="13" fill="#F7F7F4"/>
+      <circle cx="1084" cy="906" r="13" fill="#E7E8E3"/>
+      <path d="M1080 911v-13l9-2v12M1080 909c-6-2-7 6-1 6 4 0 4-3 4-6M1089 906c-6-2-7 6-1 6 4 0 4-3 4-6" class="icon"/>
+      <text x="1108" y="902" class="ui body" font-weight="650">背景音乐</text>
+      <text x="1108" y="921" class="ui micro muted">轻快通勤 · -18 dB</text>
+      <path d="M1346 903l5 5-5 5" class="icon"/>
+    </g>
+    <rect x="1057" y="946" width="311" height="26" rx="13" fill="#111111"/>
+    <text x="1212.5" y="964" class="ui micro inverse" text-anchor="middle">等待当前批次完成 · 72%</text>
+  </g>
+</svg>

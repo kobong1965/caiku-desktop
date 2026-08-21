@@ -1,0 +1,87 @@
+{
+  "name": "caiku-desktop",
+  "version": "0.1.11",
+  "private": true,
+  "description": "裁库 - 抖音带货素材拆分、管理、混剪与发布前质检桌面软件",
+  "main": "electron/main.cjs",
+  "author": "Caiku",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "electron-updater": "6.8.9",
+    "pngjs": "7.0.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/services/ai-classifier.cjs && node --check electron/services/ai-editor-service.cjs && node --check electron/services/competitor-analysis-service.cjs && node --check electron/services/quality-audit-service.cjs && node --check electron/services/task-board-service.cjs && node --check electron/services/update-service.cjs && node --check electron/services/video-engine.cjs && node --check electron/services/workspace-service.cjs && node --check electron/services/mix-engine.cjs && node --check prototype/v1/app.js && node --check prototype/v1/desktop-bridge.js",
+    "dist:win": "electron-builder --win nsis portable --x64"
+  },
+  "devDependencies": {
+    "electron": "43.4.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.caiku.desktop",
+    "productName": "裁库",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "asar": true,
+    "files": [
+      "electron/**/*",
+      "prototype/v1/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/ffmpeg",
+        "to": "bin",
+        "filter": [
+          "ffmpeg.exe",
+          "ffprobe.exe"
+        ]
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "kobong1965",
+        "repo": "caiku-desktop"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "artifactName": "caiku-desktop-setup-${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "裁库",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "caiku-desktop-portable-${version}-${arch}.${ext}"
+    }
+  }
+}
