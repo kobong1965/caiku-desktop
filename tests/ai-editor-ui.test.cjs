@@ -34,9 +34,10 @@ test("AI 剪辑计划随工程状态保存并在输入变化时标记过期", ()
   assert.match(bridge, /saved\.editingPlan/);
 });
 
-test("竞品分析结果会把可复用剪辑思路保存到脚本", () => {
+test("用户投喂视频会把可复用剪辑配方保存到脚本", () => {
   const app = read("prototype/v1/app.js");
   assert.match(app, /editingRecipe:/);
-  assert.match(app, /patterns: result\.editingPattern/);
+  assert.match(app, /patterns: recipe\.editingTechniques/);
   assert.match(app, /visibleTexts: result\.visibleTexts/);
+  assert.match(app, /sourceType: "user_uploaded_market_script"/);
 });

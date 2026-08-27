@@ -125,49 +125,67 @@ async function extractNormalizedFrame(inputPath, outputPath, seconds, width, hei
   await runFfmpeg([
     "-y", "-ss", seconds.toFixed(3), "-i", inputPath,
     "-frames:v", "1",
-    "-vf", `scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},format=rgba`,
+    "-vf", `scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,format=rgba`,
     outputPath
   ]);
+}
+
+function resizeMaskNearest(input, sourceWidth, sourceHeight, targetWidth, targetHeight) {
+  if (sourceWidth === targetWidth && sourceHeight === targetHeight) return input;
+  const output = new Uint8Array(targetWidth * targetHeight);
+  for (let y = 0; y < targetHeight; y += 1) {
+    const sourceY = Math.min(sourceHeight - 1, Math.floor(y * sourceHeight / targetHeight));
+    for (let x = 0; x < targetWidth; x += 1) {
+      const sourceX = Math.min(sourceWidth - 1, Math.floor(x * sourceWidth / targetWidth));
+      output[y * targetWidth + x] = input[sourceY * sourceWidth + sourceX];
+    }
+  }
+  return output;
 }
 
 async function generateCaptionMask(inputPath, sourceInfo, outputMaskPath, options = {}) {
   const zones = normalizeZones(options.zones);
   const samples = options.samples || [0.25, 0.5, 0.75];
-  const targetWidth = Number(options.width || 540);
-  const targetHeight = Number(options.height || 960);
+  const analysisWidth = Number(options.analysisWidth || options.width || 540);
+  const analysisHeight = Number(options.analysisHeight || options.height || 960);
+  const outputWidth = Number(options.outputWidth || analysisWidth);
+  const outputHeight = Number(options.outputHeight || analysisHeight);
+  const segmentStart = Math.max(0, Number(options.segment?.start || 0));
+  const segmentDuration = Math.max(0.1, Number(options.segment?.duration || sourceInfo.duration || 0.1));
   const workingDir = path.dirname(outputMaskPath);
   await fs.mkdir(workingDir, { recursive: true });
-  const union = new Uint8Array(targetWidth * targetHeight);
+  const union = new Uint8Array(analysisWidth * analysisHeight);
   const temporaryFrames = [];
   for (let index = 0; index < samples.length; index += 1) {
     const framePath = path.join(workingDir, `.mask-frame-${Date.now()}-${index}.png`);
     temporaryFrames.push(framePath);
-    const seconds = Math.max(0.1, Math.min(sourceInfo.duration - 0.1, sourceInfo.duration * samples[index]));
-    await extractNormalizedFrame(inputPath, framePath, seconds, targetWidth, targetHeight);
+    const seconds = Math.max(0.1, Math.min(sourceInfo.duration - 0.1, segmentStart + segmentDuration * samples[index]));
+    await extractNormalizedFrame(inputPath, framePath, seconds, analysisWidth, analysisHeight);
     const png = PNG.sync.read(await fs.readFile(framePath));
     const filtered = filterComponents(candidateMask(png, zones), png.width, png.height);
     for (let pixel = 0; pixel < union.length; pixel += 1) if (filtered[pixel]) union[pixel] = 1;
   }
   for (const zone of zones.filter((item) => item.fill)) {
-    const startX = Math.floor(zone.x * targetWidth);
-    const endX = Math.ceil(Math.min(1, zone.x + zone.width) * targetWidth);
-    const startY = Math.floor(zone.y * targetHeight);
-    const endY = Math.ceil(Math.min(1, zone.y + zone.height) * targetHeight);
+    const startX = Math.floor(zone.x * analysisWidth);
+    const endX = Math.ceil(Math.min(1, zone.x + zone.width) * analysisWidth);
+    const startY = Math.floor(zone.y * analysisHeight);
+    const endY = Math.ceil(Math.min(1, zone.y + zone.height) * analysisHeight);
     for (let y = startY; y < endY; y += 1) {
-      for (let x = startX; x < endX; x += 1) union[y * targetWidth + x] = 1;
+      for (let x = startX; x < endX; x += 1) union[y * analysisWidth + x] = 1;
     }
   }
-  const expanded = dilate(union, targetWidth, targetHeight, Number(options.dilationRadius || 3));
-  const border = Math.max(6, Math.round(targetWidth / 90));
-  for (let y = 0; y < targetHeight; y += 1) {
-    for (let x = 0; x < targetWidth; x += 1) {
-      if (x < border || x >= targetWidth - border || y < border || y >= targetHeight - border) expanded[y * targetWidth + x] = 0;
+  const expanded = dilate(union, analysisWidth, analysisHeight, Number(options.dilationRadius || 3));
+  const border = Math.max(6, Math.round(analysisWidth / 90));
+  for (let y = 0; y < analysisHeight; y += 1) {
+    for (let x = 0; x < analysisWidth; x += 1) {
+      if (x < border || x >= analysisWidth - border || y < border || y >= analysisHeight - border) expanded[y * analysisWidth + x] = 0;
     }
   }
-  const header = Buffer.from(`P5\n${targetWidth} ${targetHeight}\n255\n`, "ascii");
-  await fs.writeFile(outputMaskPath, Buffer.concat([header, Buffer.from(expanded)]));
+  const outputMask = resizeMaskNearest(expanded, analysisWidth, analysisHeight, outputWidth, outputHeight);
+  const header = Buffer.from(`P5\n${outputWidth} ${outputHeight}\n255\n`, "ascii");
+  await fs.writeFile(outputMaskPath, Buffer.concat([header, Buffer.from(outputMask)]));
   await Promise.all(temporaryFrames.map((framePath) => fs.unlink(framePath).catch(() => {})));
-  return { maskPath: outputMaskPath, zones, width: targetWidth, height: targetHeight, maskedPixels: expanded.reduce((sum, value) => sum + (value ? 1 : 0), 0) };
+  return { maskPath: outputMaskPath, zones, width: outputWidth, height: outputHeight, maskedPixels: outputMask.reduce((sum, value) => sum + (value ? 1 : 0), 0) };
 }
 
-module.exports = { candidateMask, dilate, filterComponents, generateCaptionMask, normalizeZones };
+module.exports = { candidateMask, dilate, filterComponents, generateCaptionMask, normalizeZones, resizeMaskNearest };

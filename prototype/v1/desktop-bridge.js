@@ -9,7 +9,10 @@
     activeTaskId: null,
     pendingKind: null,
     skuOptions: [],
-    selectedSku: ""
+    selectedSku: "",
+    productProfiles: [],
+    activeProductProfileSku: "",
+    productProfileDraft: { referenceImages: [], allowedClaims: [], verificationRequired: [] }
   };
 
   function ensureRuntimeBanner() {
@@ -100,23 +103,166 @@
   }
 
   function defaultBatchName() {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hour = String(now.getHours()).padStart(2, "0");
-    const minute = String(now.getMinutes()).padStart(2, "0");
-    return `${month}月${day}日 ${hour}-${minute} 上传`;
+    return "本次导入";
   }
 
   function currentSkuChoice() {
     return document.querySelector("#newSkuInput")?.value.trim() || nativeState.selectedSku || "";
   }
 
+  function manifestLibraryDir(manifest = nativeState.activeManifest) {
+    return manifest?.libraryDir || manifest?.batchDir || "";
+  }
+
   function updateSkuPathPreview() {
     const sku = currentSkuChoice();
-    const batchName = document.querySelector("#skuBatchNameInput")?.value.trim() || "待命名批次";
     const preview = document.querySelector("#skuPathPreview");
-    if (preview) preview.textContent = sku ? `${nativeState.settings.materialRoot}\\${sku}\\今天_${batchName}` : "请选择款号";
+    if (preview) preview.textContent = sku ? `${nativeState.settings.materialRoot}\\${sku}` : "请选择款号";
+    updateSkuProductProfileStatus();
+  }
+
+  function findProductProfile(sku) {
+    const key = String(sku || "").trim().toLocaleLowerCase("zh-CN");
+    return nativeState.productProfiles.find((profile) => String(profile.sku || "").toLocaleLowerCase("zh-CN") === key) || null;
+  }
+
+  function updateSkuProductProfileStatus() {
+    const status = document.querySelector("#skuProductProfileStatus");
+    if (!status) return;
+    const sku = currentSkuChoice();
+    const profile = findProductProfile(sku);
+    status.classList.toggle("is-ready", Boolean(profile));
+    const copy = status.querySelector("div");
+    if (!sku) copy.innerHTML = "<strong>尚未选择款号</strong><small>选择后会检查目标商品资料卡</small>";
+    else if (profile) copy.innerHTML = `<strong>${escapeHtml(profile.sku)} · ${escapeHtml(profile.name || "已建立商品资料")}</strong><small>${profile.referenceImages.length} 张参考图 · ${profile.allowedClaims.length} 个可用卖点</small>`;
+    else copy.innerHTML = `<strong>${escapeHtml(sku)} 还没有商品资料卡</strong><small>可以继续分类，但成片进入可投放目录前必须补全</small>`;
+  }
+
+  function emptyProductProfile(sku = "") {
+    return { sku, name: "", category: "", color: "", silhouette: "", fabric: "", audience: "", referenceImages: [], allowedClaims: [], verificationRequired: [] };
+  }
+
+  function renderProductProfileCollections() {
+    const draft = nativeState.productProfileDraft;
+    const references = document.querySelector("#productReferenceList");
+    if (references) references.innerHTML = draft.referenceImages.length ? draft.referenceImages.map((image, index) => {
+      const name = image.filePath.split(/[\\/]/).pop();
+      return `<div class="profile-reference-item"><span>图</span><span><strong>${escapeHtml(image.label || name)}</strong><small title="${escapeHtml(image.filePath)}">${escapeHtml(name)}</small></span><button type="button" data-remove-product-reference="${index}" aria-label="删除参考图${escapeHtml(name)}">删除</button></div>`;
+    }).join("") : '<div class="profile-collection-empty">暂未添加参考图</div>';
+
+    const renderClaims = (selector, values, attribute) => {
+      const target = document.querySelector(selector);
+      if (!target) return;
+      target.innerHTML = values.length ? values.map((value, index) => `<span class="profile-chip">${escapeHtml(value)}<button type="button" ${attribute}="${index}" aria-label="删除${escapeHtml(value)}">×</button></span>`).join("") : '<span class="profile-collection-empty">暂未添加</span>';
+    };
+    renderClaims("#allowedClaimList", draft.allowedClaims, "data-remove-allowed-claim");
+    renderClaims("#verificationClaimList", draft.verificationRequired, "data-remove-verification-claim");
+  }
+
+  function renderProductProfileForm(profile = emptyProductProfile()) {
+    const source = { ...emptyProductProfile(), ...profile };
+    nativeState.activeProductProfileSku = findProductProfile(source.sku)?.sku || "";
+    nativeState.productProfileDraft = {
+      referenceImages: Array.isArray(source.referenceImages) ? source.referenceImages.map((item) => ({ ...item })) : [],
+      allowedClaims: Array.isArray(source.allowedClaims) ? [...source.allowedClaims] : [],
+      verificationRequired: Array.isArray(source.verificationRequired) ? [...source.verificationRequired] : []
+    };
+    const values = {
+      productProfileSku: source.sku,
+      productProfileName: source.name,
+      productProfileCategory: source.category,
+      productProfileColor: source.color,
+      productProfileSilhouette: source.silhouette,
+      productProfileFabric: source.fabric,
+      productProfileAudience: source.audience
+    };
+    Object.entries(values).forEach(([id, value]) => {
+      const input = document.querySelector(`#${id}`);
+      if (input) input.value = value || "";
+    });
+    const skuInputElement = document.querySelector("#productProfileSku");
+    if (skuInputElement) skuInputElement.readOnly = Boolean(nativeState.activeProductProfileSku);
+    const title = document.querySelector("#productProfileEditorTitle");
+    if (title) title.textContent = nativeState.activeProductProfileSku ? `${source.sku} · ${source.name || "未命名商品"}` : "新建商品资料卡";
+    const deleteButton = document.querySelector("#deleteProductProfile");
+    if (deleteButton) deleteButton.hidden = !nativeState.activeProductProfileSku;
+    const saveState = document.querySelector("#productProfileSaveState");
+    if (saveState) saveState.textContent = nativeState.activeProductProfileSku ? "修改后点击保存" : "填写款号后保存";
+    renderProductProfileCollections();
+    renderProductProfileList(document.querySelector("#productProfileSearch")?.value || "");
+  }
+
+  function renderProductProfileList(filter = "") {
+    const list = document.querySelector("#productProfileList");
+    if (!list) return;
+    const needle = String(filter || "").trim().toLocaleLowerCase("zh-CN");
+    const profiles = nativeState.productProfiles.filter((profile) => `${profile.sku} ${profile.name} ${profile.category}`.toLocaleLowerCase("zh-CN").includes(needle));
+    list.innerHTML = profiles.length ? profiles.map((profile) => `<button class="product-profile-card ${nativeState.activeProductProfileSku === profile.sku ? "is-active" : ""}" type="button" data-product-profile-sku="${escapeHtml(profile.sku)}"><span><strong>${escapeHtml(profile.sku)} · ${escapeHtml(profile.name || "未命名商品")}</strong><small>${escapeHtml(profile.category || "未填写品类")} · ${profile.referenceImages.length} 张图</small></span><b>编辑</b></button>`).join("") : '<div class="product-profile-empty">没有匹配的商品资料卡。</div>';
+  }
+
+  function openProductProfileSettings(sku = "") {
+    const picker = document.querySelector("#skuPickerDialog");
+    if (picker?.open) picker.close();
+    navigate("settings");
+    document.querySelector('[data-settings-tab="product"]')?.click();
+    renderProductProfileForm(findProductProfile(sku) || emptyProductProfile(sku));
+    setTimeout(() => document.querySelector(sku ? "#productProfileName" : "#productProfileSku")?.focus(), 0);
+  }
+
+  function addUniqueProductClaim(kind) {
+    const isAllowed = kind === "allowed";
+    const input = document.querySelector(isAllowed ? "#allowedClaimInput" : "#verificationClaimInput");
+    const key = isAllowed ? "allowedClaims" : "verificationRequired";
+    const value = input?.value.trim() || "";
+    if (!value) return;
+    if (!nativeState.productProfileDraft[key].some((item) => item.toLocaleLowerCase("zh-CN") === value.toLocaleLowerCase("zh-CN"))) {
+      nativeState.productProfileDraft[key].push(value);
+    }
+    input.value = "";
+    renderProductProfileCollections();
+  }
+
+  async function addProductReferenceImages() {
+    const paths = await desktop.selectProductImages();
+    const existing = new Set(nativeState.productProfileDraft.referenceImages.map((item) => item.filePath.toLocaleLowerCase("zh-CN")));
+    paths.forEach((filePath, index) => {
+      const key = filePath.toLocaleLowerCase("zh-CN");
+      if (existing.has(key)) return;
+      existing.add(key);
+      nativeState.productProfileDraft.referenceImages.push({ id: `reference-${Date.now()}-${index}`, filePath, label: filePath.split(/[\\/]/).pop() });
+    });
+    renderProductProfileCollections();
+  }
+
+  async function saveProductProfileFromForm() {
+    const profile = {
+      sku: document.querySelector("#productProfileSku").value,
+      name: document.querySelector("#productProfileName").value,
+      category: document.querySelector("#productProfileCategory").value,
+      color: document.querySelector("#productProfileColor").value,
+      silhouette: document.querySelector("#productProfileSilhouette").value,
+      fabric: document.querySelector("#productProfileFabric").value,
+      audience: document.querySelector("#productProfileAudience").value,
+      ...nativeState.productProfileDraft
+    };
+    const saved = await desktop.saveProductProfile(profile);
+    nativeState.productProfiles = await desktop.listProductProfiles();
+    renderProductProfileForm(saved);
+    updateSkuProductProfileStatus();
+    showToast(`商品资料卡 ${saved.sku} 已保存`);
+  }
+
+  function deleteActiveProductProfile() {
+    const sku = nativeState.activeProductProfileSku;
+    if (!sku) return;
+    askConfirm(`删除 ${sku} 的商品资料卡？`, "只删除商品身份、参考图索引和主张规则，不会删除素材盘中的视频和图片文件。", () => {
+      desktop.deleteProductProfile(sku).then(() => desktop.listProductProfiles()).then((profiles) => {
+        nativeState.productProfiles = profiles;
+        renderProductProfileForm(emptyProductProfile());
+        updateSkuProductProfileStatus();
+        showToast(`${sku} 的商品资料卡已删除`);
+      }).catch((error) => showNativeError("删除商品资料卡失败", error));
+    });
   }
 
   function renderSkuOptions(filter = "") {
@@ -246,7 +392,9 @@
     dialog = document.createElement("dialog");
     dialog.id = "nativeReportDialog";
     dialog.className = "app-dialog";
-    dialog.innerHTML = '<button class="dialog-close" type="button" data-close-native-report aria-label="关闭">×</button><p class="eyebrow" id="nativeReportEyebrow">本地检查</p><h2 id="nativeReportTitle">检查结果</h2><p id="nativeReportMessage"></p><div class="native-report" id="nativeReportItems"></div><div class="dialog-actions"><button class="button primary" type="button" data-close-native-report>知道了</button></div>';
+    dialog.setAttribute("aria-labelledby", "nativeReportTitle");
+    dialog.setAttribute("aria-describedby", "nativeReportMessage");
+    dialog.innerHTML = '<button class="dialog-close" type="button" data-close-native-report aria-label="关闭">×</button><p class="eyebrow" id="nativeReportEyebrow">本地检查</p><h2 id="nativeReportTitle">检查结果</h2><p id="nativeReportMessage"></p><div class="native-report" id="nativeReportItems" role="status" aria-live="polite"></div><div class="dialog-actions"><button class="button secondary" type="button" data-close-native-report>知道了</button><button class="button primary" type="button" id="nativeReportAction" hidden>去处理</button></div>';
     document.body.append(dialog);
     dialog.addEventListener("click", (event) => {
       if (event.target.closest("[data-close-native-report]")) dialog.close();
@@ -254,34 +402,107 @@
     return dialog;
   }
 
-  function showNativeReport(title, message, issues = [], eyebrow = "本地检查") {
+  function nativeIssuePosition(issue) {
+    if (!issue?.blockName && !issue?.blockId) return "";
+    const fieldLabels = { voiceText: "口播文字", subtitleText: "屏幕字幕", text: "文案", name: "段落名称" };
+    return `${issue.blockName || issue.blockId}${issue.field ? ` · ${fieldLabels[issue.field] || issue.field}` : ""}`;
+  }
+
+  function showNativeReport(title, message, issues = [], eyebrow = "本地检查", options = {}) {
     const dialog = ensureNativeReportDialog();
     dialog.querySelector("#nativeReportEyebrow").textContent = eyebrow;
     dialog.querySelector("#nativeReportTitle").textContent = title;
     dialog.querySelector("#nativeReportMessage").textContent = message;
     dialog.querySelector("#nativeReportItems").innerHTML = issues.length
-      ? issues.map((issue) => `<div class="native-report-item"><strong>${escapeHtml(issue.term || issue.name || issue.level || "需要复核")}</strong><small>${escapeHtml(issue.message || issue.detail || issue.suggestion || "")}</small>${issue.suggestion ? `<small>建议：${escapeHtml(issue.suggestion)}</small>` : ""}</div>`).join("")
-      : '<div class="native-report-item"><strong>没有发现阻断项</strong><small>仍需在正式投放前人工确认商品资质、价格、库存和平台实时规则。</small></div>';
+      ? issues.map((issue) => {
+        const position = nativeIssuePosition(issue);
+        return `<div class="native-report-item"><strong>${escapeHtml(issue.term ? `命中词：${issue.term}` : issue.name || issue.level || "需要复核")}</strong>${position ? `<small>位置：${escapeHtml(position)}</small>` : ""}${issue.excerpt ? `<small>原句：${escapeHtml(issue.excerpt)}</small>` : ""}<small>${escapeHtml(issue.message || issue.detail || issue.suggestion || "")}</small>${issue.suggestion ? `<small>建议：${escapeHtml(issue.suggestion)}</small>` : ""}</div>`;
+      }).join("")
+      : '<div class="native-report-item"><strong>没有发现待修改项</strong><small>仍需在正式投放前人工确认商品资质、价格、库存和平台实时规则。</small></div>';
+    const action = dialog.querySelector("#nativeReportAction");
+    action.hidden = !options.actionLabel;
+    action.textContent = options.actionLabel || "去处理";
+    action.onclick = options.onAction ? () => {
+      dialog.close();
+      options.onAction();
+    } : null;
     if (!dialog.open) dialog.showModal();
+    (action.hidden ? dialog.querySelector("[data-close-native-report]") : action)?.focus();
+  }
+
+  function isComplianceBlockedError(error) {
+    const report = error?.details || error?.report;
+    return error?.code === "COMPLIANCE_BLOCKED"
+      || (report?.status === "blocked" && String(report?.ruleVersion || "").startsWith("CN-DOUYIN"))
+      || /阻断级风险词|文案风险/.test(String(error?.message || ""));
+  }
+
+  function openComplianceIssueInScript(issue = {}) {
+    appState.activeManagedScriptId = appState.editingScriptId;
+    renderManagedScripts();
+    renderScriptEditor();
+    navigate("scripts");
+    const field = issue.field === "subtitleText" ? "subtitle" : "voice";
+    requestAnimationFrame(() => {
+      const input = document.querySelector(`[data-block-${field}="${CSS.escape(String(issue.blockId || ""))}"]`);
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+      input?.focus({ preventScroll: true });
+    });
   }
 
   function showNativeError(title, error) {
     closeNativeProgress();
+    const report = error?.details || error?.report || null;
+    const issues = report?.issues || [{ name: error?.code || "错误", detail: error?.stderr || "请检查文件后重试" }];
+    const complianceBlocked = isComplianceBlockedError(error);
     setRuntimeStatus("桌面服务需要处理", error.message, true);
-    showNativeReport(title, error.message || "未知错误", error.details?.issues || [{ name: error.code || "错误", detail: error.stderr || "请检查文件后重试" }], "任务未完成");
+    showNativeReport(
+      complianceBlocked ? "候选生成未完成" : title,
+      complianceBlocked ? "生成服务未能写出候选成片。下方风险文案可修改后重试；已有素材不受影响。" : error.message || "未知错误",
+      issues,
+      "任务未完成",
+      complianceBlocked ? { actionLabel: "去修改脚本", onAction: () => openComplianceIssueInScript(issues[0]) } : {}
+    );
     showToast(error.message || title, true);
   }
 
   function collectAiSettings() {
     return {
-      enabled: true,
-      provider: "qwen",
-      region: document.querySelector("#qwenRegionSelect")?.value || "china",
-      model: document.querySelector("#qwenModelSelect")?.value || "qwen3.5-flash",
-      framesPerClip: Number(document.querySelector("#aiFramesSelect")?.value || 4),
-      confidenceThreshold: Number(document.querySelector("#aiConfidenceSelect")?.value || 0.85),
-      allowOfflineFallback: document.querySelector("#allowOfflineFallback")?.checked === true
+      aiClassification: {
+        enabled: true,
+        provider: "qwen",
+        region: document.querySelector("#qwenRegionSelect")?.value || "china",
+        model: document.querySelector("#qwenModelSelect")?.value || "qwen3.7-flash-2026-07-15",
+        framesPerClip: Number(document.querySelector("#aiFramesSelect")?.value || 4),
+        confidenceThreshold: Number(document.querySelector("#aiConfidenceSelect")?.value || 0.85),
+        allowOfflineFallback: document.querySelector("#allowOfflineFallback")?.checked === true
+      },
+      aiRouting: {
+        mode: document.querySelector("#aiExecutionModeSelect")?.value || "smart",
+        classificationModel: document.querySelector("#qwenModelSelect")?.value || "qwen3.7-flash-2026-07-15",
+        editorModel: document.querySelector("#qwenEditorModelSelect")?.value || "qwen3.7-plus-2026-05-26",
+        reviewerModel: document.querySelector("#qwenReviewerModelSelect")?.value || "qwen3.8-max",
+        localEndpoint: nativeState.settings?.aiRouting?.localEndpoint || "http://127.0.0.1:11434",
+        localModel: document.querySelector("#localEditorModelInput")?.value.trim() || "qwen3.5:latest",
+        allowLocalFallback: document.querySelector("#allowLocalModelFallback")?.checked !== false,
+        allowPremiumEscalation: document.querySelector("#allowPremiumEscalation")?.checked !== false,
+        reviewerThreshold: nativeState.settings?.aiRouting?.reviewerThreshold || 0.72
+      }
     };
+  }
+
+  function renderAiRouteSummary(settings = null) {
+    const routing = settings || collectAiSettings().aiRouting;
+    const badge = document.querySelector("#aiEditorRouteBadge");
+    const detail = document.querySelector("#aiEditorRouteDescription");
+    const local = routing.mode === "local_private";
+    const cloud = routing.mode === "cloud_accuracy";
+    if (badge) badge.textContent = local ? `本地隐私 · ${routing.localModel || "Qwen3.5"}` : cloud ? "云端高精度 · Plus" : "智能混合 · Plus + 本地兜底";
+    if (detail) detail.textContent = local
+      ? "本地 Qwen 会逐段核对脚本与素材，素材不出机；证据不足时仍会给出诚实替代和改词建议。"
+      : cloud
+        ? "云端 Plus 负责逐段选镜，疑难计划可升级 Max；没有对应素材证据时不会硬配卖点。"
+        : "云端 Plus 优先安排，失败时本地 Qwen 自动接手；没有拉伸、下蹲等证据时会提出诚实替代和改词建议。";
   }
 
   function setAiConnectionStatus(message, tone = "") {
@@ -295,20 +516,28 @@
     const card = document.querySelector("#batchModelStatus");
     if (!card || !nativeState.settings) return;
     const ai = nativeState.settings.aiClassification || {};
+    const routing = nativeState.settings.aiRouting || {};
     card.classList.remove("is-missing", "is-error");
     const title = card.querySelector("strong");
     const detail = card.querySelector("small");
-    if (ai.hasApiKey) {
-      title.textContent = `千问视觉分类已配置 · ${ai.model || "qwen3.5-flash"}`;
+    if (routing.mode === "local_private") {
+      title.textContent = `本地隐私分类 · ${routing.localModel || "qwen3.5:latest"}`;
+      detail.textContent = "素材不出机；由本机 Ollama 读取抽帧，低置信度进入人工复核。";
+    } else if (ai.hasApiKey) {
+      title.textContent = `千问视觉分类已配置 · ${routing.classificationModel || ai.model || "qwen3.7-flash-2026-07-15"}`;
       detail.textContent = `每片段抽取 ${ai.framesPerClip || 4} 帧；低于 ${Math.round(Number(ai.confidenceThreshold || 0.85) * 100)}% 进入人工复核。`;
+    } else if (routing.mode === "smart") {
+      card.classList.add("is-missing");
+      title.textContent = `未配置云端密钥 · 本地 ${routing.localModel || "qwen3.5:latest"} 接手`;
+      detail.textContent = "仍可分类，但全部在本机执行；配置 API Key 后会自动使用云端主力模型。";
     } else if (ai.allowOfflineFallback) {
       card.classList.add("is-missing");
       title.textContent = "千问密钥未配置 · 将使用离线兜底";
       detail.textContent = "所有兜底分类都会强制标记待复核；建议先配置 API Key。";
     } else {
       card.classList.add("is-error");
-      title.textContent = "千问 API Key 未配置 · 暂不能开始分类";
-      detail.textContent = "请先配置视觉模型，确保素材依据画面内容分配。";
+      title.textContent = "云端高精度模式缺少 API Key · 暂不能开始分类";
+      detail.textContent = "请保存千问 API Key，或把运行方式改为智能混合/本地隐私。";
     }
   }
 
@@ -327,10 +556,10 @@
     try {
       const result = await desktop.testAiConnection(collectAiSettings(), keyInput.value.trim());
       setAiConnectionStatus(`连接成功 · ${result.model} · ${result.latencyMs} ms`, "success");
-      showToast("千问视觉模型连接成功");
+      showToast(result.provider === "ollama" ? "本地 Qwen 连接成功" : "千问云端模型连接成功");
     } catch (error) {
       setAiConnectionStatus(error.message || "连接失败", "error");
-      showToast(error.message || "千问连接失败", true);
+      showToast(error.message || "AI 模型连接失败", true);
     } finally {
       button.disabled = false;
       button.textContent = "测试连接";
@@ -354,12 +583,18 @@
     if (!grid) return;
     const materials = manifest.materials || [];
     grid.innerHTML = materials.map((material) => {
-      const needsReview = material.captionStatus === "treated_needs_review" || material.classificationNeedsReview;
+      const isLowReuse = material.lowReuse === true;
+      const isBlocked = isLowReuse || material.captionStatus === "residual_blocked";
+      const needsReview = isBlocked || material.captionStatus === "treated_needs_review" || material.classificationNeedsReview;
       const category = `${material.type}${needsReview ? " issue" : ""}`;
-      const modeLabel = material.classificationMode === "qwen_vision" ? `Qwen ${Math.round(Number(material.classificationConfidence || 0) * 100)}%` : "离线兜底 · 待复核";
+      const modeLabel = material.classificationMode === "qwen_vision"
+        ? `云端 Qwen ${Math.round(Number(material.classificationConfidence || 0) * 100)}%`
+        : material.classificationMode === "ollama_vision"
+          ? `本地 Qwen ${Math.round(Number(material.classificationConfidence || 0) * 100)}%${material.classificationFallbackUsed ? " · 回退" : ""}`
+          : "离线规则 · 待复核";
       return `
       <button class="clip-card" data-clip data-material-id="${escapeHtml(material.id)}" data-category="${escapeHtml(category)}" data-name="${escapeHtml(material.name)}" data-duration="${Number(material.duration).toFixed(2)}" data-time="${Number(material.sourceStart).toFixed(2)}s — ${Number(material.sourceEnd).toFixed(2)}s" data-source-image="${escapeHtml(material.image)}" data-video-url="${escapeHtml(material.videoUrl || "")}" data-audio-muted="${material.sourceAudioMuted === true ? "true" : "mix-guard"}">
-        <span class="clip-image"><img src="${material.image}" alt="${escapeHtml(material.name)}"><span class="clip-audio-badge">静音</span><span class="clip-play-cue" aria-hidden="true">▶</span>${needsReview ? "<i>待复核</i>" : ""}<b>${Number(material.duration).toFixed(2)}s</b></span>
+        <span class="clip-image"><img src="${material.image}" alt="${escapeHtml(material.name)}"><span class="clip-audio-badge">静音</span><span class="clip-play-cue" aria-hidden="true">▶</span>${isLowReuse ? "<i>低复用</i>" : isBlocked ? "<i>字幕阻断</i>" : needsReview ? "<i>待复核</i>" : ""}<b>${Number(material.duration).toFixed(2)}s</b></span>
         <span><strong>${escapeHtml(material.name)}</strong><small>${escapeHtml(material.typeLabel)} · ${modeLabel}</small></span>
       </button>`;
     }).join("");
@@ -372,16 +607,17 @@
     if (first) {
       first.classList.add("is-selected");
       selectClip(first);
-    }
+    } else window.clearClipEditorSelection?.();
     const counts = {
       all: materials.length,
-      issue: materials.filter((item) => item.captionStatus === "treated_needs_review" || item.classificationNeedsReview).length,
+      issue: materials.filter((item) => item.eligibleForMix === false || item.captionStatus === "residual_blocked" || item.captionStatus === "treated_needs_review" || item.classificationNeedsReview).length,
       outfit: materials.filter((item) => item.type === "outfit").length,
       overall: materials.filter((item) => item.type === "overall").length,
       detail: materials.filter((item) => item.type === "detail").length,
       review: materials.filter((item) => item.type === "review").length,
       action: materials.filter((item) => item.type === "action").length,
       speech: materials.filter((item) => item.type === "speech").length,
+      upper_related: materials.filter((item) => item.type === "upper_related").length,
       other: materials.filter((item) => item.type === "other").length
     };
     Object.entries(counts).forEach(([type, count]) => {
@@ -391,38 +627,58 @@
     setClipFilter("all");
   }
 
-  function applyManifest(manifest) {
-    nativeState.activeManifest = manifest;
-    const realMaterials = (manifest.materials || []).map((material) => ({
+  function normalizeNativeMaterial(material, manifest) {
+    return {
       ...material,
       duration: Number(material.duration),
       image: material.image || "assets/video1-detail.jpg",
       uses: Number(material.uses || 0),
       manifestPath: material.manifestPath || manifest.manifestPath,
-      batchDir: material.batchDir || manifest.batchDir
-    }));
+      batchDir: material.batchDir || manifest.batchDir,
+      libraryDir: material.libraryDir || manifest.libraryDir || manifest.batchDir
+    };
+  }
+
+  function collectManifestMaterials(manifests) {
+    const materialIndex = new Map();
+    for (const manifest of manifests || []) {
+      for (const material of manifest.materials || []) {
+        const normalized = normalizeNativeMaterial(material, manifest);
+        const key = String(normalized.filePath || `${normalized.manifestPath}:${normalized.id}`).toLowerCase();
+        materialIndex.set(key, normalized);
+      }
+    }
+    return [...materialIndex.values()];
+  }
+
+  function applyManifest(manifest) {
+    nativeState.activeManifest = manifest;
+    const realMaterials = (manifest.materials || []).map((material) => normalizeNativeMaterial(material, manifest));
+    const reusableMaterials = realMaterials.filter((material) => !material.lowReuse);
+    const lowReuseCount = Number(manifest.summary?.lowReuseCount ?? realMaterials.filter((material) => material.lowReuse).length);
     appState.materials = realMaterials;
     appState.editingMaterialIds = realMaterials.slice(0, Math.min(8, realMaterials.length)).map((material) => material.id);
     libraryFolder = "all";
     document.querySelectorAll("[data-folder]").forEach((item) => item.classList.toggle("is-active", item.dataset.folder === "all"));
-    currentBatchLabel.textContent = `${manifest.sku} · ${manifest.batchName}`;
-    document.querySelector("#editingProjectTitle").textContent = `${manifest.sku} · ${manifest.batchName} 混剪`;
+    currentBatchLabel.textContent = manifest.sku;
+    document.querySelector("#editingProjectTitle").textContent = `${manifest.sku} 混剪`;
     renderLibrary();
     renderEditing();
     applyManifestToClipEditor(manifest);
     document.querySelector("#summaryIssueCount").textContent = "0";
     document.querySelector("#summaryIssueText").textContent = "全部片段 ≥ 2 秒";
-    document.querySelector(".batch-summary > div:first-child strong").textContent = String(realMaterials.length);
+    document.querySelector(".batch-summary > div:first-child strong").textContent = String(manifest.summary?.materialCount ?? reusableMaterials.length);
     const stageLabels = document.querySelectorAll(".production-line .line-stage small");
     if (stageLabels[0]) stageLabels[0].textContent = `${manifest.sources?.length || 0} 个文件`;
-    if (stageLabels[1]) stageLabels[1].textContent = `${realMaterials.length} 个片段`;
-    const issueCount = realMaterials.filter((item) => item.captionStatus === "treated_needs_review" || item.classificationNeedsReview).length;
+    if (stageLabels[1]) stageLabels[1].textContent = `${reusableMaterials.length} 个可复用 · ${lowReuseCount} 个低复用`;
+    const blockedCount = realMaterials.filter((item) => item.lowReuse || item.captionStatus === "residual_blocked").length;
+    const issueCount = realMaterials.filter((item) => item.eligibleForMix === false || item.captionStatus === "residual_blocked" || item.captionStatus === "treated_needs_review" || item.classificationNeedsReview).length;
     document.querySelector("#summaryIssueCount").textContent = String(issueCount);
-    document.querySelector("#summaryIssueText").textContent = issueCount ? "字幕区需人工抽检" : "全部检查通过";
+    document.querySelector("#summaryIssueText").textContent = lowReuseCount ? `${lowReuseCount} 个复杂图文或字幕风险片段已分流` : blockedCount ? `${blockedCount} 个片段因字幕风险不可混剪` : issueCount ? "商品身份或分类需要复核" : "全部检查通过";
     document.querySelector("#navIssueCount").textContent = String(issueCount);
     document.querySelector("#lineIssueLabel").textContent = `${issueCount} 个待复核`;
     document.querySelector("#filterIssueCount").textContent = String(issueCount);
-    document.querySelector("#batch-panel-title").textContent = `${manifest.batchName} · ${manifest.sku}`;
+    document.querySelector("#batch-panel-title").textContent = `${manifest.sku} · ${manifest.batchName || "本次导入"}`;
     const unusableBadge = document.querySelector('[data-folder="unusable"] b');
     if (unusableBadge) unusableBadge.textContent = String(manifest.summary?.unusableCount || 0);
     const fixedFolderButtons = [...document.querySelectorAll("[data-folder]")].filter((button) => !["all", "unusable"].includes(button.dataset.folder));
@@ -432,58 +688,50 @@
       const small = fixedFolderButtons[0].querySelector("small");
       const badge = fixedFolderButtons[0].querySelector("b");
       if (strong) strong.textContent = manifest.sku;
-      if (small) small.textContent = manifest.batchName;
-      if (badge) badge.textContent = String(realMaterials.length);
+      if (small) {
+        const categories = Object.entries(manifest.summary?.categories || {}).filter(([, count]) => Number(count) > 0).slice(0, 2);
+        small.textContent = categories.map(([label, count]) => `${label} ${count}`).join(" · ") || "按内容分类";
+      }
+      if (badge) badge.textContent = String(reusableMaterials.length);
     }
     if (fixedFolderButtons[1]) fixedFolderButtons[1].hidden = true;
-    document.querySelector("#nextActionTitle").textContent = `${realMaterials.length} 个片段等待分类与字幕区复核`;
-    document.querySelector("#nextActionText").textContent = `已归档到 ${manifest.batchDir}`;
+    document.querySelector("#nextActionTitle").textContent = `${reusableMaterials.length} 个可复用片段，${lowReuseCount} 个低复用待复核`;
+    document.querySelector("#nextActionText").textContent = `已按内容分类到 ${manifestLibraryDir(manifest)}`;
     const simpleTitle = document.querySelector("#simple-result-title");
     const simplePath = document.querySelector("#simpleResultPath");
     const simpleStatus = document.querySelector("#simpleResultStatus");
-    if (simpleTitle) simpleTitle.textContent = `${manifest.sku} · ${manifest.batchName}`;
-    if (simplePath) simplePath.textContent = `已保存到 ${manifest.batchDir}`;
+    if (simpleTitle) simpleTitle.textContent = `${manifest.sku} · 分类完成`;
+    if (simplePath) simplePath.textContent = `已保存到 ${manifestLibraryDir(manifest)}`;
     if (simpleStatus) {
-      simpleStatus.className = `status-pill ${issueCount ? "processing" : "success"}`;
-      simpleStatus.textContent = issueCount ? "需要复核" : "处理完成";
+      simpleStatus.className = `status-pill ${blockedCount ? "danger" : issueCount ? "processing" : "success"}`;
+      simpleStatus.textContent = lowReuseCount ? "已完成安全分流" : blockedCount ? "字幕阻断" : issueCount ? "需要复核" : "处理完成";
     }
-    document.querySelector("#simpleMaterialCount").textContent = String(realMaterials.length);
-    document.querySelector("#simpleReviewCount").textContent = String(issueCount);
-    const shortest = realMaterials.length ? Math.min(...realMaterials.map((item) => Number(item.duration || 0))) : 2;
+    document.querySelector("#simpleMaterialCount").textContent = String(reusableMaterials.length);
+    document.querySelector("#simpleReviewCount").textContent = String(lowReuseCount || blockedCount);
+    const shortest = reusableMaterials.length ? Math.min(...reusableMaterials.map((item) => Number(item.duration || 0))) : 2;
     document.querySelector("#simpleMinimumDuration").textContent = `${Math.max(2, shortest).toFixed(1)} 秒`;
-    const qwenCount = realMaterials.filter((material) => material.classificationMode === "qwen_vision").length;
-    setRuntimeStatus(qwenCount === realMaterials.length && realMaterials.length ? "千问分类批次已连接" : "历史素材批次已连接", qwenCount === realMaterials.length && realMaterials.length ? `${manifest.sku} · ${realMaterials.length} 个 Qwen 分类片段 · 全部 ≥ 2 秒` : `${manifest.sku} · ${realMaterials.length} 个合格片段 · 历史分类未记录模型，建议重新上传分析`);
-  }
-
-  function collectScriptText(script) {
-    return (script?.blocks || []).map((block) => block.subtitleText || block.voiceText || block.text || block.name || "").join("。");
+    const aiCount = realMaterials.filter((material) => ["qwen_vision", "ollama_vision"].includes(material.classificationMode)).length;
+    setRuntimeStatus(aiCount === realMaterials.length && realMaterials.length ? "AI 分类结果已连接" : "历史素材已连接", aiCount === realMaterials.length && realMaterials.length ? `${manifest.sku} · ${realMaterials.length} 个视觉模型分类片段 · 全部 ≥ 2 秒` : `${manifest.sku} · ${realMaterials.length} 个合格片段 · 历史分类未记录模型，建议重新上传分析`);
   }
 
   function mapNativeOutput(output) {
     const report = output.report || {};
-    const scriptStatus = report.script?.status || "review";
-    const coverageStatus = report.materialCoverage?.status || "review";
-    const visualStatus = report.visualSemantic?.status || "review";
-    const voiceStatus = report.voice?.status || "not_selected";
-    const technicalStatus = report.technical?.status || "blocked";
-    const status = output.status === "pass" ? "pass" : "risk";
-    const issues = [];
-    if (scriptStatus !== "pass") issues.push("文案风险词需要复核");
-    if (coverageStatus !== "pass") issues.push(report.materialCoverage?.message || "素材分类覆盖需要复核");
-    if (visualStatus !== "pass") issues.push(report.visualSemantic?.summary || "千问画面与文案一致性需要复核");
-    if (voiceStatus === "not_selected") issues.push("需要口播但未生成独立配音");
-    if (technicalStatus !== "pass") issues.push("导出技术规格未通过");
+    const status = ["ready_100", "repair_required", "blocked", "manual_review"].includes(report.status) ? report.status : "manual_review";
+    const issues = [...(report.hardBlockers || []).map((item) => item.message), ...(report.reviewItems || []).map((item) => item.message)];
+    const checks = Object.values(report.scoreBreakdown || {}).map((dimension) => ({
+      name: `${dimension.label} · ${dimension.score}分`,
+      passed: dimension.status === "pass" && Number(dimension.score) === 100,
+      detail: dimension.reasons?.join("；") || "已通过硬门槛",
+      status: dimension.status
+    }));
     return {
       ...output,
       status,
       duration: formatDuration(output.duration),
-      issue: issues.length ? issues.join("；") : "离线四项基础检查通过，可进入人工终审。",
-      checks: [
-        { name: "千问画面与文案一致性", passed: visualStatus === "pass", detail: report.visualSemantic?.summary || "已抽取成片关键帧并与脚本要求核对" },
-        { name: voiceStatus === "not_required" ? "纯音乐模式" : "口播音轨可用", passed: voiceStatus !== "not_selected", detail: report.voice?.note || "已检查音轨" },
-        { name: "极限词与风险表达", passed: scriptStatus === "pass", detail: scriptStatus === "pass" ? "离线规则库未发现风险表达" : "请查看逐词报告并人工复核" },
-        { name: "1080×1920 投放规格", passed: technicalStatus === "pass", detail: report.technical?.expected || "1080×1920 · 9:16 · H.264 · AAC" }
-      ]
+      score: Number(report.totalScore ?? output.score ?? 0),
+      issue: issues.length ? issues.slice(0, 3).join("；") : "画面、文案、音轨与输出规格检查通过，可进入发布前人工终审。",
+      checks,
+      repairActions: report.repairActions || []
     };
   }
 
@@ -493,8 +741,8 @@
   }
 
   async function startNativeProcessing() {
-    if (!skuInput.value.trim() || !batchNameInput.value.trim()) {
-      showToast("请先在弹窗中选择款号和批次名称", true);
+    if (!skuInput.value.trim()) {
+      showToast("请先在弹窗中选择款号", true);
       return;
     }
     if (!nativeState.selectedSources.length) {
@@ -502,35 +750,41 @@
       return;
     }
     const ai = nativeState.settings.aiClassification || {};
-    if (!ai.hasApiKey && !ai.allowOfflineFallback) {
+    const routing = nativeState.settings.aiRouting || {};
+    if (routing.mode === "cloud_accuracy" && !ai.hasApiKey) {
       openModelSettings();
       setAiConnectionStatus("请先填写并测试千问 API Key", "error");
-      showToast("请先配置千问视觉模型，素材才会按画面内容分类", true);
+      showToast("云端高精度模式需要先配置千问 API Key", true);
       return;
     }
     nativeState.pendingKind = "process";
-    showNativeProgress("正在拆分、去字幕并分类", "读取镜头变化，所有低于 2 秒的边界会自动合并…");
+    showNativeProgress("正在检测、修复并按服装语义分类", routing.mode === "local_private" ? "本地 Qwen 正在看画面；普通字幕由本机修复，复杂图文自动分流…" : "千问判断画面；普通字幕由 GPU 修复，复杂图文进入低复用待复核…");
     try {
       const manifest = await desktop.processBatch({
         sku: skuInput.value.trim(),
-        batchName: batchNameInput.value.trim(),
+        batchName: batchNameInput.value.trim() || "本次导入",
         rootDir: nativeState.settings.materialRoot,
         sourcePaths: nativeState.selectedSources,
         keepOriginals: document.querySelector("#keepOriginals").checked,
         minimumClipSeconds: 2,
-        maximumClipSeconds: 9,
+        maximumClipSeconds: 6,
         sceneThreshold: 0.32,
         captionMode: nativeState.settings.captionMode || "smart_mask"
       });
       closeNativeProgress();
       applyManifest(manifest);
+      const allManifests = await desktop.listBatches(nativeState.settings.materialRoot);
+      appState.materials = collectManifestMaterials([...allManifests, manifest]);
+      appState.editingMaterialIds = (manifest.materials || []).slice(0, Math.min(8, manifest.materials?.length || 0)).map((material) => material.id);
+      renderLibrary();
+      renderEditing();
       nativeState.selectedSources = [];
       nativeState.sourceInfo = [];
       renderSelectedSources();
       setUploadStep(1);
       await refreshTaskBoard({ silent: true });
       navigate("cleanup");
-      showToast(`分析完成：${manifest.materials.length} 个片段已分类，请检查结果`);
+      showToast(`分析完成：${manifest.summary?.materialCount ?? manifest.materials.length} 个可复用，${manifest.summary?.lowReuseCount || 0} 个低复用待复核`);
       scheduleProjectSave();
     } catch (error) {
       showNativeError("素材处理失败", error);
@@ -549,12 +803,12 @@
     status.className = "status-pill processing";
     status.textContent = "检查中";
     try {
-      const report = await desktop.checkText(collectScriptText(script));
-      status.className = `status-pill ${report.status === "pass" ? "success" : "danger"}`;
-      status.textContent = report.status === "pass" ? "✓ 可进入生成" : `! ${report.issues.length} 项需处理`;
+      const report = await desktop.checkScript(script);
+      status.className = `status-pill ${report.status === "pass" ? "success" : "processing"}`;
+      status.textContent = report.status === "pass" ? "✓ 可生成候选" : `! ${report.issues.length} 项生成后处理`;
       showNativeReport(
-        report.status === "pass" ? "文案预检通过" : "文案需要修改或复核",
-        `离线规则库 ${report.ruleVersion} · 得分 ${report.score}`,
+        report.status === "pass" ? "文案预检通过" : "已记录生成后待修改项",
+        `离线规则库 ${report.ruleVersion} · 得分 ${report.score}。预检结果不阻止候选生成，只影响投放状态。`,
         report.issues,
         "脚本发布前检查"
       );
@@ -571,19 +825,27 @@
       return;
     }
     nativeState.pendingKind = "editor-plan";
-    showNativeProgress("本地 AI 剪辑师正在安排", `Qwen 3.5 正在核对 ${script.blocks.length} 个脚本段落与 ${materials.length} 个候选素材…`);
+    const routing = nativeState.settings?.aiRouting || {};
+    const sku = String(nativeState.activeManifest?.sku || materials[0]?.sku || "").trim();
+    const manifestPaths = [...new Set(appState.materials.filter((item) => !sku || item.sku === sku).map((item) => item.manifestPath).filter(Boolean))];
+    const routeLabel = routing.mode === "local_private" ? `本地 ${routing.localModel || "Qwen3.5"}` : `${routing.editorModel || "Qwen3.7-Plus"} 主力`;
+    showNativeProgress("剪辑智能体正在安排", `${routeLabel}正在读取 ${script.blocks.length} 个脚本段落、人工分类清单与 ${materials.length} 个本次勾选素材…`);
     try {
       const plan = await desktop.createEditingPlan({
         projectName: document.querySelector("#editingProjectTitle").textContent,
         script,
-        materials
+        materials,
+        selectedMaterialIds: materials.map((item) => item.id),
+        category: findProductProfile(sku)?.category || "服装带货",
+        catalogRequest: { sku, manifestPaths, humanConfirmed: true }
       });
       closeNativeProgress();
       appState.editingPlan = { ...plan, confirmed: false };
       renderEditing();
       scheduleProjectSave();
       const missingCount = plan.decisions.filter((decision) => decision.evidenceStatus === "missing").length;
-      setRuntimeStatus("本地 AI 剪辑师已完成安排", missingCount ? `${missingCount} 个段落缺少直接画面证据，请检查改词建议` : `${plan.decisions.length} 个段落均已生成可执行时间线`);
+      const providerLabel = plan.provider === "qwen" ? "云端千问" : "本地 Qwen";
+      setRuntimeStatus(`${providerLabel}剪辑师已完成安排`, missingCount ? `${missingCount} 个段落缺少直接画面证据，请检查改词建议` : `${plan.decisions.length} 个段落均已生成可执行时间线`);
       showToast(missingCount ? `计划已生成，${missingCount} 个段落需要人工复核` : "计划已生成，请确认后开始混剪");
     } catch (error) {
       showNativeError("AI 剪辑规划失败", error);
@@ -620,17 +882,36 @@
       showToast("所选素材包含低于 2 秒的片段，已阻止混剪", true);
       return;
     }
-    if (!appState.editingPlan || appState.editingPlan.confirmed !== true || window.caikuEditingPlanIsStale?.() || appState.editingPlan.status === "blocked") {
-      showToast("请先让 AI 剪辑师安排镜头，检查并确认决策单", true);
+    if (!appState.editingPlan || appState.editingPlan.confirmed !== true || window.caikuEditingPlanIsStale?.()) {
+      showToast("请先确认当前剪辑方案", true);
       return;
     }
-    if (!appState.music.length) {
-      showToast("请先添加本次混剪使用的背景音乐", true);
+    let complianceReport = null;
+    try {
+      complianceReport = await desktop.checkScript(script);
+      const status = document.querySelector("#scriptPrecheckStatus");
+      if (status) {
+        status.className = `status-pill ${complianceReport.status === "pass" ? "success" : "processing"}`;
+        status.textContent = complianceReport.status === "pass" ? "✓ 可生成候选" : `! ${complianceReport.issues.length} 项生成后处理`;
+      }
+      if (complianceReport.status === "blocked") {
+        setRuntimeStatus("将先生成候选成片", `已记录 ${complianceReport.issues.length} 项文案风险，生成后按报告修改。`);
+        showToast(`已记录 ${complianceReport.issues.length} 项文案风险，仍会先生成候选`);
+      }
+    } catch (error) {
+      showNativeError("文案检查失败", error);
       return;
     }
     const musicOnly = script.voiceMode === "music_only";
+    const musicFile = appState.music.find((item) => item?.filePath);
+    if (!musicOnly && !appState.voices.length && appState.voicePreviewApproved !== true) {
+      showToast("尚未试听 AI 配音，将先生成候选并在结果中标为待听感复核");
+    }
+    if (musicOnly && !musicFile) {
+      showToast("尚未添加音乐，将先生成静音候选，结果标为待补音乐");
+    }
     nativeState.pendingKind = "mix";
-    showNativeProgress("正在混剪并逐条质检", `生成 ${appState.outputCount} 条 1080×1920 成片…`);
+    showNativeProgress("正在生成候选成片并逐条检查", `先生成 ${appState.outputCount} 条 1080×1920 候选成片，风险项将写入质检报告…`);
     try {
       const result = await desktop.mixBatch({
         batchDir: nativeState.activeManifest.batchDir,
@@ -638,11 +919,14 @@
         materials,
         script,
         voicePath: musicOnly ? null : appState.voices[0]?.filePath || null,
-        musicPath: appState.music[0]?.filePath || null,
+        aiVoicePreset: appState.selectedAiVoice || "真人短种草",
+        voicePreviewApproved: musicOnly || appState.voices.length ? false : appState.voicePreviewApproved === true,
+        musicPath: musicFile?.filePath || null,
         voiceMode: script.voiceMode || "full_voice",
         useOfflineVoice: !musicOnly && !appState.voices.length,
         outputCount: appState.outputCount,
-        allowComplianceOverride: false,
+        allowComplianceOverride: true,
+        qualityMode: true,
         requireEditingPlan: true,
         editingPlan: appState.editingPlan
       });
@@ -651,47 +935,95 @@
       appState.mixOutputDir = result.outputDir;
       appState.productionStep = 5;
       renderEditing();
-      setRuntimeStatus("本地成片任务已完成", `${appState.outputs.length} 条 1080×1920 成片 · 每条均有独立质检报告`);
-      showToast(`${appState.outputs.length} 条成片与逐条质检报告已保存`);
-      window.showMixCompleteDialog?.(result.outputDir, appState.outputs.length, 0);
+      const readyCount = appState.outputs.filter((item) => item.status === "ready_100").length;
+      const revisionCount = appState.outputs.length - readyCount;
+      setRuntimeStatus("候选成片任务已完成", `生成 ${appState.outputs.length} 条 · 可投放 ${readyCount} 条 · 待修改 ${revisionCount} 条`);
+      showToast(`已生成 ${appState.outputs.length} 条候选成片；${readyCount} 条可投放，${revisionCount} 条待修改`);
+      window.showMixCompleteDialog?.(result.outputDir, readyCount, appState.outputs.length - readyCount);
       scheduleProjectSave();
     } catch (error) {
-      showNativeError(error.code === "COMPLIANCE_BLOCKED" ? "文案风险已阻止生成" : "混剪任务失败", error);
+      showNativeError("候选成片生成失败", error);
+    }
+  }
+
+  async function previewNativeVoice(button) {
+    const script = appState.scripts.find((item) => item.id === appState.editingScriptId);
+    const text = (script?.blocks || [])
+      .filter((block) => script?.voiceMode === "full_voice" || block.voiceEnabled !== false)
+      .map((block) => block.voiceText || block.text || "")
+      .filter(Boolean)
+      .join("。")
+      .slice(0, 180);
+    appState.selectedAiVoice = button.dataset.aiVoice;
+    appState.voicePreviewApproved = false;
+    document.querySelectorAll("[data-ai-voice]").forEach((item) => item.classList.toggle("is-selected", item === button));
+    renderEditing();
+    button.disabled = true;
+    button.classList.add("is-loading");
+    try {
+      const preview = await desktop.previewVoice({ presetName: button.dataset.aiVoice, text, duration: Number(script?.duration || 0) });
+      const audio = new Audio(preview.fileUrl);
+      await audio.play();
+      appState.voicePreviewApproved = true;
+      renderEditing();
+      showToast(`正在试听 ${button.dataset.aiVoice}；本次试听已记录`);
+    } catch (error) {
+      appState.voicePreviewApproved = false;
+      showNativeError("自然配音试听失败", error);
+    } finally {
+      button.disabled = false;
+      button.classList.remove("is-loading");
     }
   }
 
   async function openCurrentBatch() {
-    if (!nativeState.activeManifest?.batchDir) {
-      showToast("当前还没有已连接的素材批次", true);
+    const libraryDir = manifestLibraryDir();
+    if (!libraryDir) {
+      showToast("当前还没有已连接的款号素材", true);
       return;
     }
-    await desktop.openPath(nativeState.activeManifest.batchDir);
+    await desktop.openPath(libraryDir);
   }
 
   function deleteCurrentBatch() {
     const manifest = nativeState.activeManifest;
-    if (!manifest?.batchDir) {
-      showToast("当前还没有可删除的素材批次", true);
+    if (!manifest?.manifestPath) {
+      showToast("当前还没有可删除的导入记录", true);
       return;
     }
     askConfirm(
-      `删除整个批次“${manifest.sku} · ${manifest.batchName}”？`,
-      "该批次的拆分素材、缩略图、成片和报告会一起移入系统回收站；你最初上传位置中的原视频不会删除。",
+      `删除本次导入“${manifest.sku} · ${manifest.batchName || "本次导入"}”？`,
+      "只会精确移除本次生成的分类片段、归档副本和任务记录；不会删除同款号的其他素材，也不会删除原上传文件。",
       async () => {
         try {
-          await desktop.trashPath(manifest.batchDir);
-          nativeState.activeManifest = null;
-          appState.materials = [];
-          appState.editingMaterialIds = [];
-          appState.outputs = [];
-          renderLibrary();
-          renderEditing();
-          resetSimpleResult();
-          setRuntimeStatus("当前批次已移入回收站", "可以从素材分类上传新批次，或到素材管理重新读取素材盘");
-          showToast("整批素材已移入系统回收站，可在回收站恢复");
+          const removedIds = new Set((manifest.materials || []).map((material) => material.id));
+          await desktop.trashBatch(manifest.manifestPath);
+          appState.materials = appState.materials.filter((material) => !removedIds.has(material.id));
+          appState.editingMaterialIds = appState.editingMaterialIds.filter((id) => !removedIds.has(id));
+          const remaining = await desktop.listBatches(nativeState.settings.materialRoot);
+          if (remaining[0]?.manifestPath) {
+            const nextManifest = await desktop.loadManifest(remaining[0].manifestPath);
+            nextManifest.manifestPath = remaining[0].manifestPath;
+            applyManifest(nextManifest);
+            appState.materials = collectManifestMaterials(remaining);
+            renderLibrary();
+            renderEditing();
+          } else {
+            nativeState.activeManifest = null;
+            appState.materials = [];
+            appState.editingMaterialIds = [];
+            applyManifestToClipEditor({ materials: [] });
+            renderLibrary();
+            renderEditing();
+            resetSimpleResult();
+            navigate("import");
+          }
+          currentBatchLabel.textContent = nativeState.activeManifest?.sku || "请选择款号";
+          setRuntimeStatus("本次导入已移入回收站", "同款号的其他内容分类素材保持不变");
+          showToast("本次导入的文件和任务记录已移入系统回收站");
           scheduleProjectSave();
         } catch (error) {
-          showNativeError("删除批次失败", error);
+          showNativeError("删除本次导入失败", error);
         }
       }
     );
@@ -708,7 +1040,7 @@
 
   function updateImportPathNative() {
     if (!nativeState.settings) return;
-    importPathPreview.textContent = `${nativeState.settings.materialRoot}\\${skuInput.value || "未填写款号"}\\${batchNameInput.value || "未填写批次"}`;
+    importPathPreview.textContent = `${nativeState.settings.materialRoot}\\${skuInput.value || "未填写款号"}`;
   }
 
   async function saveNativeSettings() {
@@ -726,7 +1058,8 @@
       document.querySelector("#qwenApiKeyInput").value = "";
       updateImportPathNative();
       updateBatchModelStatus();
-      setAiConnectionStatus(nativeState.settings.aiClassification?.hasApiKey ? "密钥已安全保存" : "未配置密钥");
+      const savedRouting = nativeState.settings.aiRouting || {};
+      setAiConnectionStatus(savedRouting.mode === "local_private" ? "本地隐私模式已启用" : nativeState.settings.aiClassification?.hasApiKey ? "密钥已安全保存" : "智能混合将使用本地模型");
       setRuntimeStatus("设置已保存", nativeState.settings.materialRoot);
       navigate("source");
       showToast("设置已保存到本机用户数据目录");
@@ -769,6 +1102,8 @@
       nativeState.bootstrap = bootstrap;
       nativeState.settings = bootstrap.settings;
       nativeState.taskBoard = bootstrap.taskBoard;
+      nativeState.productProfiles = Array.isArray(bootstrap.productProfiles) ? bootstrap.productProfiles : [];
+      renderProductProfileForm(nativeState.productProfiles[0] || emptyProductProfile());
       document.querySelector("#desktopVersionLabel").textContent = `v${bootstrap.app.version} · 本地素材工作台`;
       window.renderUpdateStatus?.({ ...(bootstrap.update || {}), currentVersion: bootstrap.app.version });
       applyWindowState(bootstrap.window || {});
@@ -777,12 +1112,20 @@
       document.querySelector("#captionModeSelect").value = bootstrap.settings.captionMode || "smart_mask";
       document.querySelector("#keepOriginals").checked = bootstrap.settings.keepOriginals !== false;
       const ai = bootstrap.settings.aiClassification || {};
+      const routing = bootstrap.settings.aiRouting || {};
       document.querySelector("#qwenRegionSelect").value = ai.region || "china";
-      document.querySelector("#qwenModelSelect").value = ai.model || "qwen3.5-flash";
+      document.querySelector("#aiExecutionModeSelect").value = routing.mode || "smart";
+      document.querySelector("#qwenModelSelect").value = routing.classificationModel || ai.model || "qwen3.7-flash-2026-07-15";
+      document.querySelector("#qwenEditorModelSelect").value = routing.editorModel || "qwen3.7-plus-2026-05-26";
+      document.querySelector("#qwenReviewerModelSelect").value = routing.reviewerModel || "qwen3.8-max";
+      document.querySelector("#localEditorModelInput").value = routing.localModel || "qwen3.5:latest";
+      document.querySelector("#allowLocalModelFallback").checked = routing.allowLocalFallback !== false;
+      document.querySelector("#allowPremiumEscalation").checked = routing.allowPremiumEscalation !== false;
+      renderAiRouteSummary(routing);
       document.querySelector("#aiFramesSelect").value = String(ai.framesPerClip || 4);
       document.querySelector("#aiConfidenceSelect").value = String(ai.confidenceThreshold || 0.85);
       document.querySelector("#allowOfflineFallback").checked = ai.allowOfflineFallback === true;
-      setAiConnectionStatus(ai.hasApiKey ? "已安全保存密钥，可测试连接" : "未配置千问 API Key", ai.hasApiKey ? "success" : "error");
+      setAiConnectionStatus(routing.mode === "local_private" ? "本地隐私模式 · 可测试 Ollama" : ai.hasApiKey ? "已安全保存密钥，可测试连接" : "未配置千问 API Key · 智能混合将使用本地模型", routing.mode === "local_private" || ai.hasApiKey ? "success" : "");
       updateBatchModelStatus();
       fileList.innerHTML = "";
       syncSimpleBatchFields("fromLegacy");
@@ -812,11 +1155,11 @@
         const materialIndex = new Map();
         for (const diskBatch of bootstrap.batches) {
           for (const material of diskBatch.materials || []) {
-            materialIndex.set(material.id, { ...material, duration: Number(material.duration), image: material.image || "assets/video1-detail.jpg", uses: Number(material.uses || 0), manifestPath: material.manifestPath || diskBatch.manifestPath, batchDir: material.batchDir || diskBatch.batchDir });
+            materialIndex.set(material.id, { ...material, duration: Number(material.duration), image: material.image || "assets/video1-detail.jpg", uses: Number(material.uses || 0), manifestPath: material.manifestPath || diskBatch.manifestPath, batchDir: material.batchDir || diskBatch.batchDir, libraryDir: material.libraryDir || diskBatch.libraryDir || diskBatch.batchDir });
           }
         }
         for (const material of batch.materials || []) {
-          materialIndex.set(material.id, { ...material, duration: Number(material.duration), image: material.image || "assets/video1-detail.jpg", uses: Number(material.uses || 0), manifestPath: material.manifestPath || batch.manifestPath, batchDir: material.batchDir || batch.batchDir });
+          materialIndex.set(material.id, { ...material, duration: Number(material.duration), image: material.image || "assets/video1-detail.jpg", uses: Number(material.uses || 0), manifestPath: material.manifestPath || batch.manifestPath, batchDir: material.batchDir || batch.batchDir, libraryDir: material.libraryDir || batch.libraryDir || batch.batchDir });
         }
         appState.materials = [...materialIndex.values()];
         if (Array.isArray(saved.editingMaterialIds)) {
@@ -844,7 +1187,7 @@
     desktop.onProgress(updateNativeProgress);
 
     document.addEventListener("click", (event) => {
-      const action = event.target.closest("#dropZone, #simpleUploadButton, #simpleEmptyUpload, #startAnalysisButton, #simpleStartAnalysis, #confirmSkuAnalysis, #refreshTaskBoard, #runScriptPrecheck, #planWithAiEditor, #replanWithAiEditor, #startConnectedMix, #addVoiceAsset, #addMusicAsset, #chooseMaterialRoot, #saveSettingsButton, #openLibraryFolder, #openCurrentBatch, #simpleOpenBatch, #deleteCurrentBatch, #simpleDeleteBatch, #addLibraryButton, #emptyAddMaterial, #testAiConnection, #clearAiKey, #toggleQwenKey, [data-open-model-settings], [data-open-task-dir], [data-remove-native-source], [data-remove-simple-source]");
+      const action = event.target.closest("#dropZone, #simpleUploadButton, #simpleEmptyUpload, #startAnalysisButton, #simpleStartAnalysis, #confirmSkuAnalysis, #refreshTaskBoard, #runScriptPrecheck, #planWithAiEditor, #replanWithAiEditor, #startConnectedMix, #addVoiceAsset, #addMusicAsset, #chooseMaterialRoot, #saveSettingsButton, #openLibraryFolder, #openCurrentBatch, #simpleOpenBatch, #deleteCurrentBatch, #simpleDeleteBatch, #addLibraryButton, #emptyAddMaterial, #testAiConnection, #clearAiKey, #toggleQwenKey, #newProductProfile, #addProductReferences, #addAllowedClaim, #addVerificationClaim, #saveProductProfile, #deleteProductProfile, #editSkuProductProfile, [data-ai-voice], [data-product-profile-sku], [data-remove-product-reference], [data-remove-allowed-claim], [data-remove-verification-claim], [data-open-model-settings], [data-open-task-dir], [data-remove-native-source], [data-remove-simple-source]");
       if (!action) return;
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -855,12 +1198,31 @@
       else if (action.matches("#runScriptPrecheck")) runNativePrecheck();
       else if (action.matches("#planWithAiEditor, #replanWithAiEditor")) runNativeEditingPlan();
       else if (action.matches("#startConnectedMix")) startNativeMix();
+      else if (action.matches("[data-ai-voice]")) previewNativeVoice(action);
       else if (action.matches("#addVoiceAsset")) chooseAudio("voice");
       else if (action.matches("#addMusicAsset")) chooseAudio("music");
       else if (action.matches("#chooseMaterialRoot")) chooseMaterialRoot();
       else if (action.matches("#saveSettingsButton")) saveNativeSettings();
       else if (action.matches("#testAiConnection")) testNativeAiConnection();
       else if (action.matches("#clearAiKey")) clearNativeAiKey();
+      else if (action.matches("#newProductProfile")) renderProductProfileForm(emptyProductProfile());
+      else if (action.matches("#editSkuProductProfile")) openProductProfileSettings(currentSkuChoice());
+      else if (action.matches("[data-product-profile-sku]")) renderProductProfileForm(findProductProfile(action.dataset.productProfileSku));
+      else if (action.matches("#addProductReferences")) addProductReferenceImages().catch((error) => showNativeError("添加商品参考图失败", error));
+      else if (action.matches("#addAllowedClaim")) addUniqueProductClaim("allowed");
+      else if (action.matches("#addVerificationClaim")) addUniqueProductClaim("verification");
+      else if (action.matches("#saveProductProfile")) saveProductProfileFromForm().catch((error) => showNativeError("保存商品资料卡失败", error));
+      else if (action.matches("#deleteProductProfile")) deleteActiveProductProfile();
+      else if (action.matches("[data-remove-product-reference]")) {
+        nativeState.productProfileDraft.referenceImages.splice(Number(action.dataset.removeProductReference), 1);
+        renderProductProfileCollections();
+      } else if (action.matches("[data-remove-allowed-claim]")) {
+        nativeState.productProfileDraft.allowedClaims.splice(Number(action.dataset.removeAllowedClaim), 1);
+        renderProductProfileCollections();
+      } else if (action.matches("[data-remove-verification-claim]")) {
+        nativeState.productProfileDraft.verificationRequired.splice(Number(action.dataset.removeVerificationClaim), 1);
+        renderProductProfileCollections();
+      }
       else if (action.matches("#toggleQwenKey")) {
         const input = document.querySelector("#qwenApiKeyInput");
         input.type = input.type === "password" ? "text" : "password";
@@ -886,6 +1248,13 @@
         renderSelectedSources();
       }
     }, true);
+
+    document.addEventListener("change", (event) => {
+      if (event.target.matches("#aiExecutionModeSelect, #qwenEditorModelSelect, #localEditorModelInput, #allowLocalModelFallback, #allowPremiumEscalation")) {
+        renderAiRouteSummary();
+        updateBatchModelStatus();
+      }
+    });
 
     dropZone.addEventListener("drop", (event) => {
       event.preventDefault();
@@ -919,6 +1288,13 @@
     document.querySelector("#skuBatchNameInput")?.addEventListener("input", updateSkuPathPreview);
     document.querySelector("#skuPickerDialog")?.addEventListener("close", () => {
       if (nativeState.pendingKind !== "process") setUploadStep(1);
+    });
+    document.querySelector("#productProfileSearch")?.addEventListener("input", (event) => renderProductProfileList(event.target.value));
+    document.querySelector("#allowedClaimInput")?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") { event.preventDefault(); addUniqueProductClaim("allowed"); }
+    });
+    document.querySelector("#verificationClaimInput")?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") { event.preventDefault(); addUniqueProductClaim("verification"); }
     });
     document.addEventListener("change", scheduleProjectSave);
     document.addEventListener("input", scheduleProjectSave);

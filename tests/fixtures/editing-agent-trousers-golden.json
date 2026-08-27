@@ -1,0 +1,47 @@
+{
+  "sku": "918",
+  "humanConfirmed": true,
+  "manifests": [
+    {
+      "sku": "918",
+      "batchName": "黄金回归_人工确认",
+      "manifestPath": "D:/抖音素材库/918/黄金回归/manifest.json",
+      "materials": [
+        { "id": "outfit-hook-001", "name": "正面上身开场", "sku": "918", "duration": 4, "type": "outfit", "typeLabel": "人物穿搭", "filePath": "D:/抖音素材库/918/人物穿搭/outfit-hook-001.mp4", "eligibleForMix": false, "captionStatus": "treated_needs_review" },
+        { "id": "detail-waist-001", "name": "腰头双褶近景", "sku": "918", "duration": 4, "type": "detail", "typeLabel": "细节讲解", "filePath": "D:/抖音素材库/918/细节讲解/detail-waist-001.mp4", "eligibleForMix": false, "lowReuse": true },
+        { "id": "outfit-result-002", "name": "转身上身效果", "sku": "918", "duration": 4, "type": "outfit", "typeLabel": "人物穿搭", "filePath": "D:/抖音素材库/918/人物穿搭/outfit-result-002.mp4", "eligibleForMix": true, "actions": ["转身"], "evidence": [{ "claimCode": "movement", "label": "动态展示", "status": "direct", "observations": ["人物完成转身，裤装轮廓持续可见"] }] },
+        { "id": "overall-office-001", "name": "通勤整体搭配", "sku": "918", "duration": 4, "type": "overall", "typeLabel": "整体展示", "filePath": "D:/抖音素材库/918/整体展示/overall-office-001.mp4", "classificationNeedsReview": true },
+        { "id": "review-cta-001", "name": "完整上身收尾", "sku": "918", "duration": 4, "type": "review", "typeLabel": "测评对比", "filePath": "D:/抖音素材库/918/测评对比/review-cta-001.mp4", "captionVerification": { "status": "blocked" } }
+      ]
+    }
+  ],
+  "script": {
+    "id": "golden-918-question-detail-outfit",
+    "name": "918 西裤问题钩子种草 15秒",
+    "voiceMode": "full_voice",
+    "blocks": [
+      { "id": "hook", "name": "问题开场", "duration": 3, "type": "outfit", "category": "人物穿搭", "voiceText": "还有人不懂西裤要怎么穿搭？", "subtitleText": "还有人不懂西裤要怎么穿搭？", "visualInstruction": "正面上身开场" },
+      { "id": "detail", "name": "细节证据", "duration": 3, "type": "detail", "category": "细节讲解", "voiceText": "先看腰头和裤褶的细节。", "subtitleText": "先看腰头和裤褶的细节。", "visualInstruction": "腰头和裤褶近景" },
+      { "id": "outfit", "name": "上身结果", "duration": 3, "type": "outfit", "category": "人物穿搭", "voiceText": "再回到上身看正面和转身效果。", "subtitleText": "再回到上身看正面和转身效果。", "visualInstruction": "正面和转身上身画面" },
+      { "id": "scene", "name": "通勤场景", "duration": 3, "type": "overall", "category": "整体展示", "voiceText": "日常通勤可以照着这套搭配。", "subtitleText": "日常通勤可以照着这套搭配。", "visualInstruction": "通勤整体搭配画面" },
+      { "id": "cta", "name": "轻引导结尾", "duration": 3, "type": "review", "category": "测评对比", "voiceText": "喜欢这种感觉，可以点商品卡再看看尺码。", "subtitleText": "喜欢这种感觉，可以点商品卡再看看尺码。", "visualInstruction": "完整上身收尾" }
+    ]
+  },
+  "modelPlan": {
+    "summary": "按问题钩子、细节、上身、场景和轻引导完成逐句安排",
+    "warnings": [],
+    "decisions": [
+      { "blockId": "hook", "narrativeRole": "question_hook", "evidenceStatus": "direct", "selectedMaterialIds": ["outfit-hook-001"], "unsupportedClaims": [], "rewriteRequired": false, "reason": "人物穿搭正面画面直接承接穿搭问题", "timeline": [{ "materialId": "outfit-hook-001", "sourceStart": 0, "duration": 3 }] },
+      { "blockId": "detail", "narrativeRole": "detail_evidence", "evidenceStatus": "direct", "selectedMaterialIds": ["detail-waist-001"], "unsupportedClaims": [], "rewriteRequired": false, "reason": "细节讲解分类直接展示腰头和裤褶", "timeline": [{ "materialId": "detail-waist-001", "sourceStart": 0, "duration": 3 }] },
+      { "blockId": "outfit", "narrativeRole": "outfit_result", "evidenceStatus": "direct", "selectedMaterialIds": ["outfit-result-002"], "unsupportedClaims": [], "rewriteRequired": false, "reason": "人物穿搭分类展示正面和转身结果", "timeline": [{ "materialId": "outfit-result-002", "sourceStart": 0, "duration": 3 }] },
+      { "blockId": "scene", "narrativeRole": "use_case", "evidenceStatus": "direct", "selectedMaterialIds": ["overall-office-001"], "unsupportedClaims": [], "rewriteRequired": false, "reason": "整体展示分类承接通勤搭配场景", "timeline": [{ "materialId": "overall-office-001", "sourceStart": 0, "duration": 3 }] },
+      { "blockId": "cta", "narrativeRole": "soft_cta", "evidenceStatus": "direct", "selectedMaterialIds": ["review-cta-001"], "unsupportedClaims": [], "rewriteRequired": false, "reason": "完整上身收尾承接克制引导", "timeline": [{ "materialId": "review-cta-001", "sourceStart": 0, "duration": 3 }] }
+    ]
+  },
+  "expected": {
+    "materialCount": 5,
+    "narrativeOrder": ["question_hook", "detail_evidence", "outfit_result", "use_case", "soft_cta"],
+    "materialIds": ["detail-waist-001", "outfit-hook-001", "outfit-result-002", "overall-office-001", "review-cta-001"],
+    "totalDuration": 15
+  }
+}

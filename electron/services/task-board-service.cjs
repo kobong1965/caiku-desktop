@@ -66,10 +66,10 @@ function taskFromManifest(batch = {}, index = 0) {
     completedAt: batch.status === "ready_for_review" ? batch.updatedAt || batch.createdAt : null,
     sourceCount: summary.sourceCount ?? batch.sources?.length,
     materialCount: summary.materialCount ?? batch.materials?.length,
-    reviewCount: summary.lowConfidenceCount,
+    reviewCount: summary.reviewCount ?? summary.lowReuseCount ?? summary.lowConfidenceCount,
     unusableCount: summary.unusableCount,
     manifestPath: batch.manifestPath,
-    batchDir: batch.batchDir,
+    batchDir: batch.libraryDir || batch.batchDir,
     categories: summary.categories,
     errorMessage: batch.error?.message,
     origin: "manifest"
@@ -132,11 +132,11 @@ function completeClassificationTask(task, manifest, now = new Date()) {
     message: `完成 ${positiveCount(summary.materialCount ?? manifest.materials?.length)} 个素材分类`,
     sourceCount: summary.sourceCount ?? manifest.sources?.length ?? task.sourceCount,
     materialCount: summary.materialCount ?? manifest.materials?.length,
-    reviewCount: summary.lowConfidenceCount,
+    reviewCount: summary.reviewCount ?? summary.lowReuseCount ?? summary.lowConfidenceCount,
     unusableCount: summary.unusableCount,
     categories: summary.categories,
     manifestPath: manifest.manifestPath,
-    batchDir: manifest.batchDir
+    batchDir: manifest.libraryDir || manifest.batchDir
   });
 }
 

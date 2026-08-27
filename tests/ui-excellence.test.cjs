@@ -40,7 +40,8 @@ test("空状态和零选择操作不会显示为可执行", () => {
   assert.match(html, /id="exportPassedOutputs"[^>]*disabled/);
   assert.match(app, /confirmMaterialPicker\.disabled = materialPickerSelection\.size === 0/);
   assert.match(app, /repairButton\.disabled = risk === 0/);
-  assert.match(app, /exportButton\.disabled = !appState\.outputs\.length \|\| risk > 0/);
+  assert.match(app, /exportButton\.disabled = passed === 0/);
+  assert.match(app, /const readyOutputs = appState\.outputs\.filter\(\(output\) => output\.status === "ready_100"\)/);
 });
 
 test("素材选择器具备搜索筛选全选并使用真实导航文案", () => {

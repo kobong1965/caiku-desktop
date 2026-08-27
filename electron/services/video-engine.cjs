@@ -3,7 +3,7 @@ const path = require("node:path");
 const { runFfmpeg, runFfprobe } = require("./process-runner.cjs");
 
 const MINIMUM_CLIP_SECONDS = 2;
-const MAXIMUM_CLIP_SECONDS = 9;
+const MAXIMUM_CLIP_SECONDS = 6;
 
 async function probeVideo(filePath) {
   const { stdout } = await runFfprobe([
@@ -107,6 +107,7 @@ const CLASSIFICATIONS = [
   { type: "review", label: "测评对比", folder: "04_测评对比" },
   { type: "action", label: "动作展示", folder: "05_动作展示" },
   { type: "speech", label: "口播", folder: "06_口播" },
+  { type: "upper_related", label: "上衣相关", folder: "91_上衣相关" },
   { type: "other", label: "其他", folder: "90_其他" }
 ];
 
@@ -126,19 +127,76 @@ function escapeFilterPath(filePath) {
   return String(filePath).replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
 }
 
-function createVideoFilter(captionMode = "blur_band", captionMaskPath = null) {
-  const normalize = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30,format=yuv420p";
-  if (captionMode === "keep") return { filter: normalize, map: "0:v:0" };
-  if (captionMode === "smart_mask" && captionMaskPath) return { filter: `scale=540:960:force_original_aspect_ratio=increase,crop=540:960,removelogo=f='${escapeFilterPath(captionMaskPath)}',scale=1080:1920,setsar=1,fps=30,format=yuv420p`, map: "0:v:0" };
-  if (captionMode === "crop_reframe") return { filter: `${normalize},crop=878:1560:101:360,scale=1080:1920`, map: "0:v:0" };
-  return {
-    complex: `[0:v]${normalize},split[base][blur];[blur]crop=iw:ih*0.18:0:ih*0.08,boxblur=14:2[band];[base][band]overlay=0:H*0.08[outv]`,
-    map: "[outv]"
+function buildCaptionRegionFilters(regions = [], width = 1080, height = 1920) {
+  return (Array.isArray(regions) ? regions : []).slice(0, 12).map((region) => {
+    const x = Number(region?.x);
+    const y = Number(region?.y);
+    const regionWidth = Number(region?.width);
+    const regionHeight = Number(region?.height);
+    const confidence = Number(region?.confidence);
+    if (![x, y, regionWidth, regionHeight].every(Number.isFinite) || regionWidth <= 0 || regionHeight <= 0) return null;
+    if (Number.isFinite(confidence) && confidence < 0.45) return null;
+    if (regionWidth * regionHeight > 0.16) return null;
+    const paddingX = 0.018;
+    const paddingY = 0.012;
+    const left = Math.max(0, Math.floor((x - paddingX) * width));
+    const top = Math.max(0, Math.floor((y - paddingY) * height));
+    const right = Math.min(width, Math.ceil((x + regionWidth + paddingX) * width));
+    const bottom = Math.min(height, Math.ceil((y + regionHeight + paddingY) * height));
+    const boxWidth = Math.max(16, right - left);
+    const boxHeight = Math.max(16, bottom - top);
+    if (left + boxWidth > width || top + boxHeight > height) return null;
+    return `delogo=x=${left}:y=${top}:w=${boxWidth}:h=${boxHeight}:show=0`;
+  }).filter(Boolean);
+}
+
+function chooseCaptionSafeCrop(regions = [], width = 1080, height = 1920) {
+  const boxes = (Array.isArray(regions) ? regions : []).map((region) => ({
+    x: Number(region?.x),
+    y: Number(region?.y),
+    width: Number(region?.width),
+    height: Number(region?.height),
+    confidence: Number(region?.confidence)
+  })).filter((region) => [region.x, region.y, region.width, region.height].every(Number.isFinite)
+    && region.width > 0 && region.height > 0
+    && (!Number.isFinite(region.confidence) || region.confidence >= 0.45));
+  const candidates = [
+    { x: 0.1, y: 0.15, scale: 0.8 },
+    { x: 1 / 6, y: 0.25, scale: 2 / 3 },
+    { x: 2 / 9, y: 0.26, scale: 5 / 9 },
+    { x: 0.239, y: 0.06, scale: 0.521 },
+    { x: 0.239, y: 0.42, scale: 0.521 },
+    { x: 0.3, y: 0.28, scale: 0.4 }
+  ];
+  const overlapArea = (crop, box) => {
+    const overlapWidth = Math.max(0, Math.min(crop.x + crop.scale, box.x + box.width) - Math.max(crop.x, box.x));
+    const overlapHeight = Math.max(0, Math.min(crop.y + crop.scale, box.y + box.height) - Math.max(crop.y, box.y));
+    return overlapWidth * overlapHeight;
   };
+  const ranked = candidates.map((candidate) => ({
+    ...candidate,
+    overlap: boxes.reduce((sum, box) => sum + overlapArea(candidate, box), 0)
+  })).sort((left, right) => left.overlap - right.overlap || right.scale - left.scale);
+  const selected = ranked[0];
+  const cropWidth = Math.max(2, Math.floor((width * selected.scale) / 2) * 2);
+  const cropHeight = Math.max(2, Math.floor((height * selected.scale) / 2) * 2);
+  const cropX = Math.max(0, Math.min(width - cropWidth, Math.floor((width * selected.x) / 2) * 2));
+  const cropY = Math.max(0, Math.min(height - cropHeight, Math.floor((height * selected.y) / 2) * 2));
+  return { x: cropX, y: cropY, width: cropWidth, height: cropHeight, overlap: Number(selected.overlap.toFixed(4)) };
+}
+
+function createVideoFilter(captionMode = "blur_band", captionMaskPath = null, captionRegions = []) {
+  const normalize = "scale='min(1080,iw)':'min(1920,ih)':force_original_aspect_ratio=decrease:flags=lanczos,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30,format=yuv420p";
+  if (captionMode === "keep") return { filter: normalize, map: "0:v:0" };
+  if (captionMode === "smart_mask") {
+    return { filter: normalize, map: "0:v:0" };
+  }
+  if (captionMode === "crop_reframe") return { filter: normalize, map: "0:v:0" };
+  return { filter: normalize, map: "0:v:0" };
 }
 
 function buildSegmentExportArgs(inputPath, outputPath, segment, options = {}) {
-  const videoFilter = createVideoFilter(options.captionMode || "blur_band", options.captionMaskPath);
+  const videoFilter = createVideoFilter(options.captionMode || "blur_band", options.captionMaskPath, options.captionRegions);
   const args = ["-y", "-ss", segment.start.toFixed(3), "-i", inputPath, "-t", segment.duration.toFixed(3)];
   args.push("-f", "lavfi", "-t", segment.duration.toFixed(3), "-i", "anullsrc=r=48000:cl=stereo");
   if (videoFilter.complex) args.push("-filter_complex", videoFilter.complex);
@@ -211,6 +269,8 @@ module.exports = {
   MINIMUM_CLIP_SECONDS,
   classifySegment,
   buildSegmentExportArgs,
+  buildCaptionRegionFilters,
+  chooseCaptionSafeCrop,
   detectScenes,
   exportSegment,
   generateAnalysisFrames,

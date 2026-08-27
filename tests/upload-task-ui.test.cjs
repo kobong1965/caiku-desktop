@@ -37,7 +37,7 @@ test("上传完成后点击分析会打开款号选择窗口再执行后台处�
   assert.match(preload, /listSkuOptions: \(\) => invoke\("sku:list"\)/);
 });
 
-test("任务板显示今日分类计数并可刷新和打开批次目录", () => {
+test("任务板显示今日分类计数并可刷新和打开款号目录", () => {
   const html = read("prototype/v1/index.html");
   const app = read("prototype/v1/app.js");
   const bridge = read("prototype/v1/desktop-bridge.js");
@@ -51,4 +51,34 @@ test("任务板显示今日分类计数并可刷新和打开批次目录", () =>
   assert.match(bridge, /\[data-open-task-dir\]/);
   assert.match(main, /classificationTasks: \[\]/);
   assert.match(main, /buildTodayTaskBoard/);
+});
+
+test("正式素材按款号和内容分类保存，日期只进入内部任务记录", () => {
+  const html = read("prototype/v1/index.html");
+  const bridge = read("prototype/v1/desktop-bridge.js");
+  const preload = read("electron/preload.cjs");
+  const main = read("electron/main.cjs");
+  const workspace = read("electron/services/workspace-service.cjs");
+
+  assert.match(html, /按款号和内容分类建目录/);
+  assert.match(html, /918\\01_人物穿搭、918\\03_细节讲解/);
+  assert.match(html, /任务备注（可选）/);
+  assert.doesNotMatch(html, /918\\按内容分类/);
+  assert.doesNotMatch(bridge, /\\\\按内容分类/);
+  assert.match(workspace, /const INTERNAL_TASKS_FOLDER = "_裁库任务"/);
+  assert.match(workspace, /createSkuLibraryFolders\(skuDir\)/);
+  assert.match(workspace, /function planBatchStorage/);
+  assert.match(workspace, /isLibraryCategoryFolder\(folder\) \? libraryDir : batchDir/);
+  assert.match(workspace, /path\.join\(batchDir, "\.staging", fileName\)/);
+  assert.match(workspace, /await fs\.rename\(outputPath, finalOutputPath\)/);
+  assert.doesNotMatch(workspace, /path\.join\(skuDir, `\$\{dateStamp\(\)\}_\$\{batchName\}`\)/);
+
+  assert.match(preload, /trashBatch: \(manifestPath\) => invoke\("batch:trash", \{ manifestPath \}\)/);
+  assert.match(main, /safeHandle\("batch:trash"/);
+  assert.match(bridge, /desktop\.trashBatch\(manifest\.manifestPath\)/);
+  assert.doesNotMatch(bridge, /desktop\.trashPath\(manifest\.batchDir\)/);
+  assert.match(bridge, /appState\.materials = collectManifestMaterials\(\[\.\.\.allManifests, manifest\]\)/);
+  assert.match(bridge, /const nextManifest = await desktop\.loadManifest\(remaining\[0\]\.manifestPath\)/);
+  assert.match(bridge, /applyManifestToClipEditor\(\{ materials: \[\] \}\)/);
+  assert.match(preload, /trashMaterial: \(material\) => invoke\("material:trash", \{\s*id: material\.id,\s*manifestPath: material\.manifestPath\s*\}\)/);
 });

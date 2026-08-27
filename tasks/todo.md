@@ -1,37 +1,51 @@
-# 裁库 0.1.11 自动更新与发布任务清单
+# 剪辑智能体训练系统 v0.1 任务清单
 
-- [x] Task 1：冻结安装、数据与 GitHub 发布基线
-  - Acceptance：记录当前版本、安装路径、快捷方式目标、状态文件哈希、GitHub 账号和目标仓库。
-  - Verify：PowerShell 路径/哈希检查与 `gh auth status`。
+- [x] Task 1：建立训练数据合同和本地案例仓库
+  - Acceptance：参考成品、成对案例、反例、版本和软删除可写入、读取、恢复和审计；原视频不复制、不修改。
+  - Verify：schema、路径、哈希、授权、版本与回收站单元测试。
+  - Files：`electron/services/editing-training-repository.cjs`、`tests/editing-training-repository.test.cjs`、`docs/剪辑智能体训练数据字典_v0.1.md`。
 
-- [x] Task 2：先写更新服务和 UI 合同测试
-  - Acceptance：测试覆盖状态映射、IPC、更新设置页、进度与按钮可用性。
-  - Verify：新增测试先失败，再由实现使其通过。
+- [x] Task 2：把用户投喂的参考成品分析成市场带货脚本模式
+  - Acceptance：只分析用户主动上传的视频，提取问题钩子、叙事顺序、镜头角色、切点、口播、字幕、音乐和 CTA；不搜索、不自动抓取或下载市场视频，也不把参考商品事实写入当前款号。用户选择云端模型时只请求已配置的模型端点。
+  - Verify：固定投喂视频结构黄金测试、本地模型断网测试和外部视频发现禁用测试，覆盖“还有人不懂西裤要怎么穿搭？”模式。
+  - Files：`electron/services/editing-case-analysis-service.cjs`、`electron/services/competitor-analysis-service.cjs`、`tests/editing-case-analysis-service.test.cjs`。
 
-- [x] Task 3：实现主进程更新控制器与安全 IPC
-  - Acceptance：仅正式包可检查；用户确认后下载；下载完成后才允许安装；错误可重试。
-  - Verify：更新服务单元测试、`npm run check`。
+- [x] Task 3：读取人工确认的素材分类清单
+  - Acceptance：把素材分类板块保存的款号、二级分类和全部人工确认素材完整读取给剪辑智能体；不运行字幕、时长、画质、款号或其他二次筛选，不删除、不降级、不改类。
+  - Verify：输入 manifest 中每个分类和素材 ID 必须原样出现在目录结果；测试确认二次筛选函数不会被调用。
+  - Files：`electron/services/classified-material-catalog-service.cjs`、`tests/classified-material-catalog-service.test.cjs`。
 
-- [x] Task 4：实现“设置 > 软件更新”界面
-  - Acceptance：版本、来源、状态、进度和三段操作清晰；最小窗口无溢出；固定页脚隐藏。
-  - Verify：UI 合同测试与桌面实测截图。
+- [x] Task 4：实现用户投喂案例和脚本模式检索
+  - Acceptance：只从用户投喂的本地案例库中按商品类目、脚本意图、镜头角色和风格返回 3–5 个可追溯案例；删除、低分和未授权训练案例不进入正向学习。
+  - Verify：本地排序稳定性、案例状态规则、断网运行和无案例安全降级测试。
+  - Files：`electron/services/editing-retrieval-service.cjs`、`tests/editing-retrieval-service.test.cjs`。
 
-- [x] Task 5：配置 0.1.11 与 GitHub provider
-  - Acceptance：包版本为 0.1.11，构建配置指向公开仓库并生成 `latest.yml`。
-  - Verify：检查 `package.json`、`package-lock.json` 和构建产物。
+- [x] Task 5：实现逐句画面绑定和叙事状态机
+  - Acceptance：每句文案都有 `sentenceIntent`、目标素材角色、商品证据和选镜理由；按“问题钩子 → 细节证据 → 上身结果 → 使用场景 → 轻 CTA”生成时间线。
+  - Verify：跳题、重复结论、无证据文案、叙事倒序和随机填充镜头必须被逻辑门禁拦截。
+  - Files：`electron/services/narrative-continuity-service.cjs`、`electron/services/sentence-media-alignment-service.cjs`、`electron/services/ai-editor-service.cjs`、`tests/narrative-continuity-service.test.cjs`。
 
-- [x] Task 6：全量回归与 Windows 打包
-  - Acceptance：语法检查、全部测试通过；安装版、便携版、blockmap、`latest.yml` 齐全。
-  - Verify：`npm run check`、`npm test`、`npm run dist:win`。
+- [x] Task 6：统一配音、字幕和时间线文本源
+  - Acceptance：有口播模式下逐句文案、配音、字幕和画面时段一一对应；纯音乐模式允许不生成口播和字幕。
+  - Verify：文本一致性、句级时长、音频时长、字幕区间和时间线边界测试。
+  - Files：`electron/services/sentence-media-alignment-service.cjs`、`electron/services/timeline-optimizer-service.cjs`、`tests/sentence-media-alignment-service.test.cjs`。
 
-- [x] Task 7：公开源码并创建 GitHub Release
-  - Acceptance：公开仓库可访问；默认分支包含可公开源码；`v0.1.11` 为正式发布并有完整资产。
-  - Verify：`gh repo view`、`gh release view`、公开 URL 请求。
+- [x] Task 7：保存用户反馈版本并隔离千川数据
+  - Acceptance：接受、拒绝、换镜、改切点和改文案均保存为新版本和原因；现有千川字段不传给剪辑智能体、不出现在学习报告。
+  - Verify：版本回放、回滚、删除和千川数据隔离测试。
+  - Files：`electron/services/editing-feedback-service.cjs`、`electron/services/ai-editor-service.cjs`、`electron/main.cjs`、`tests/editing-feedback-service.test.cjs`。
 
-- [x] Task 8：原位安装与数据连续性验收
-  - Acceptance：原路径与快捷方式不变；状态文件哈希和业务数据计数不变；0.1.11 可启动。
-  - Verify：安装前后哈希、快捷方式目标、运行进程与界面版本检查。
+- [x] Task 8：完成“市场脚本学习”和 AI 编排交互
+  - Acceptance：脚本管理可拖入用户选择的参考成品、查看分析配方、编辑并设为金标；AI 编排可查看人工确认的分类清单、逐句使用的分类与片段、选镜理由和逻辑门禁；所有用户可添加项都有删除按钮。
+  - Verify：拖放、删除、暂停、继续、重试、详情、生成和错误状态 UI 测试。
+  - Files：`prototype/v1/index.html`、`prototype/v1/styles.css`、`prototype/v1/app.js`、`electron/preload.cjs`、`tests/prototype-v1.test.cjs`。
 
-- [x] Task 9：交付下载链接
-  - Acceptance：Release 页面和安装版直链可匿名访问，用户可直接下载。
-  - Verify：最终 URL HEAD/GET 验证。
+- [x] Task 9：完成固定西裤脚本端到端黄金回归
+  - Acceptance：固定脚本按问题钩子、细节、上身、场景和 CTA 顺序，从人工确认分类中生成逻辑完整计划；选镜理由可审计，分类素材数量、ID 和类别不被智能体修改。
+  - Verify：新黄金测试、分类清单完整性测试、全量单测、静态检查和 v0.1.23 上游高难字幕回归。
+  - Files：`tests/fixtures/editing-agent-trousers-golden.json`、`tests/editing-agent-golden.test.cjs`、`scripts/regression-editing-agent.cjs`。
+
+- [x] Task 10：补丁构建和本机连续性验证
+  - Acceptance：仅升级补丁版本；原安装目录、桌面快捷方式、用户设置、历史项目、素材盘引用和已验收素材保持不变。
+  - Verify：版本、构建哈希、启动、快捷方式目标和用户状态前后对照。
+  - Files：`package.json`、`package-lock.json`、`docs/剪辑智能体训练系统验收报告_v0.1.md`。

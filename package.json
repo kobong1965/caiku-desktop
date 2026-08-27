@@ -1,6 +1,6 @@
 {
   "name": "caiku-desktop",
-  "version": "0.1.11",
+  "version": "0.1.28",
   "private": true,
   "description": "裁库 - 抖音带货素材拆分、管理、混剪与发布前质检桌面软件",
   "main": "electron/main.cjs",
@@ -13,7 +13,9 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test tests/*.test.cjs",
-    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/services/ai-classifier.cjs && node --check electron/services/ai-editor-service.cjs && node --check electron/services/competitor-analysis-service.cjs && node --check electron/services/quality-audit-service.cjs && node --check electron/services/task-board-service.cjs && node --check electron/services/update-service.cjs && node --check electron/services/video-engine.cjs && node --check electron/services/workspace-service.cjs && node --check electron/services/mix-engine.cjs && node --check prototype/v1/app.js && node --check prototype/v1/desktop-bridge.js",
+    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/services/ai-model-router.cjs && node --check electron/services/ai-classifier.cjs && node --check electron/services/ai-editor-service.cjs && node --check electron/services/audio-quality-service.cjs && node --check electron/services/caption-mask-engine.cjs && node --check electron/services/caption-repair-service.cjs && node --check electron/services/caption-verification-service.cjs && node --check electron/services/claim-evidence-service.cjs && node --check electron/services/classification-delete-service.cjs && node --check electron/services/classified-material-catalog-service.cjs && node --check electron/services/competitor-analysis-service.cjs && node --check electron/services/editing-case-analysis-service.cjs && node --check electron/services/editing-feedback-service.cjs && node --check electron/services/editing-retrieval-service.cjs && node --check electron/services/editing-training-repository.cjs && node --check electron/services/fashion-video-standard-service.cjs && node --check electron/services/narrative-continuity-service.cjs && node --check electron/services/output-gate-service.cjs && node --check electron/services/product-profile-service.cjs && node --check electron/services/qianchuan-feedback-service.cjs && node --check electron/services/quality-score-service.cjs && node --check electron/services/quality-audit-service.cjs && node --check electron/services/qwen-tts-service.cjs && node --check electron/services/repair-planner-service.cjs && node --check electron/services/sentence-media-alignment-service.cjs && node --check electron/services/task-board-service.cjs && node --check electron/services/timeline-optimizer-service.cjs && node --check electron/services/update-service.cjs && node --check electron/services/variant-similarity-service.cjs && node --check electron/services/video-engine.cjs && node --check electron/services/voice-style-service.cjs && node --check electron/services/workspace-service.cjs && node --check electron/services/mix-engine.cjs && node --check prototype/v1/app.js && node --check prototype/v1/desktop-bridge.js && node --check scripts/regression-editing-agent.cjs",
+    "smoke:quality": "node scripts/quality-render-smoke.cjs",
+    "regression:editing-agent": "node scripts/regression-editing-agent.cjs",
     "dist:win": "electron-builder --win nsis portable --x64"
   },
   "devDependencies": {
@@ -28,6 +30,7 @@
     "files": [
       "electron/**/*",
       "prototype/v1/**/*",
+      "skills/**/*",
       "package.json"
     ],
     "extraResources": [
@@ -42,6 +45,14 @@
       {
         "from": "build/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "scripts",
+        "to": "pipeline",
+        "filter": [
+          "remove-dynamic-captions.py",
+          "batch-subtitle-audit.py"
+        ]
       }
     ],
     "directories": {

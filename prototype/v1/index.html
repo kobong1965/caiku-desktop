@@ -65,13 +65,13 @@
         <div class="header-actions">
           <div class="batch-switcher-wrap">
             <button class="batch-switcher" id="batchSwitcher" aria-haspopup="menu" aria-expanded="false">
-              <span><small>当前款号</small><strong id="currentBatchLabel">S2026-08 · 神裤测评 01</strong></span>
+              <span><small>当前款号</small><strong id="currentBatchLabel">918</strong></span>
               <span aria-hidden="true">⌄</span>
             </button>
             <div class="batch-menu" id="batchMenu" role="menu" hidden>
-              <button role="menuitem" data-batch="S2026-08 · 神裤测评 01" data-batch-status="处理中">S2026-08 · 神裤测评 01 <small>处理中</small></button>
-              <button role="menuitem" data-batch="K172-07 · 褶皱西裤 02" data-batch-status="待校对">K172-07 · 褶皱西裤 02 <small>待校对</small></button>
-              <button role="menuitem" data-batch="M090-31 · 夏季通勤裤" data-batch-status="已完成">M090-31 · 夏季通勤裤 <small>已完成</small></button>
+              <button role="menuitem" data-batch="918" data-batch-status="已连接">918 <small>已连接</small></button>
+              <button role="menuitem" data-batch="K172-07" data-batch-status="已归类">K172-07 <small>已归类</small></button>
+              <button role="menuitem" data-batch="M090-31" data-batch-status="已归类">M090-31 <small>已归类</small></button>
             </div>
           </div>
           <button class="drive-state" data-toast="素材盘 D:\抖音素材库，剩余 1.36 TB">
@@ -96,7 +96,7 @@
                 <li><span>3</span><strong>分析并归档</strong><small>自动分类入盘</small></li>
               </ol>
               <div class="simple-batch-fields is-batch-only">
-                <label>批次名称（可选）<input id="simpleBatchNameInput" value="" autocomplete="off" placeholder="留空会按当前时间自动命名"></label>
+                <label>任务备注（可选）<input id="simpleBatchNameInput" value="" autocomplete="off" placeholder="仅用于追溯本次上传，不会生成日期文件夹"></label>
               </div>
               <div class="simple-source-list" id="simpleSourceList" aria-live="polite">
                 <button class="simple-empty-upload" id="simpleEmptyUpload" type="button"><strong>添加视频</strong><small>支持 MP4、MOV，可一次选择多个视频或直接拖入</small></button>
@@ -110,26 +110,26 @@
 
             <section class="simple-result-panel" id="simpleResultPanel" aria-labelledby="simple-result-title">
               <div class="simple-panel-head">
-                <div><small>当前批次</small><h2 id="simple-result-title">尚未处理新批次</h2><p id="simpleResultPath">添加视频并完成分析后，结果会自动保存到素材盘。</p></div>
+                <div><small>本次处理结果</small><h2 id="simple-result-title">尚未分析新素材</h2><p id="simpleResultPath">添加视频并完成分析后，结果会直接保存到款号的内容分类中。</p></div>
                 <span class="status-pill" id="simpleResultStatus">等待上传</span>
               </div>
               <div class="simple-result-stats">
-                <div><strong id="simpleMaterialCount">0</strong><span>可用片段</span></div>
-                <div><strong id="simpleReviewCount">0</strong><span>需要复核</span></div>
+                <div><strong id="simpleMaterialCount">0</strong><span>分类片段</span></div>
+                <div><strong id="simpleReviewCount">0</strong><span>不可混剪</span></div>
                 <div><strong id="simpleMinimumDuration">≥ 2 秒</strong><span>片段下限</span></div>
               </div>
               <div class="simple-result-actions">
                 <button class="button primary" data-route="library">查看素材</button>
                 <button class="button secondary" data-route="cleanup">检查分类与字幕</button>
                 <button class="button text" id="simpleOpenBatch">打开文件夹</button>
-                <button class="button danger-text" id="simpleDeleteBatch">删除批次</button>
+                <button class="button danger-text" id="simpleDeleteBatch">删除本次导入</button>
               </div>
             </section>
           </div>
 
           <div class="legacy-source-ui" aria-hidden="true">
           <nav class="module-tabs" aria-label="素材分类流程">
-            <button class="is-active" data-route="source">批次概览</button>
+            <button class="is-active" data-route="source">分类概览</button>
             <button data-route="import">上传并分析</button>
             <button data-route="cleanup">分类与字幕复核</button>
           </nav>
@@ -148,8 +148,8 @@
           <div class="workbench-grid">
             <section class="batch-panel" aria-labelledby="batch-panel-title">
               <div class="section-heading">
-                <div><p class="eyebrow">正在处理</p><h2 id="batch-panel-title">神裤测评 · 批次 01</h2></div>
-                <div class="action-row"><button class="text-button" id="openCurrentBatch">打开批次目录 ↗</button><button class="text-button danger-text" id="deleteCurrentBatch">删除当前批次</button></div>
+                <div><p class="eyebrow">正在处理</p><h2 id="batch-panel-title">918 · 本次导入</h2></div>
+                <div class="action-row"><button class="text-button" id="openCurrentBatch">打开款号素材目录 ↗</button><button class="text-button danger-text" id="deleteCurrentBatch">删除本次导入</button></div>
               </div>
 
               <div class="source-strip">
@@ -171,14 +171,14 @@
                 </div>
               </div>
 
-              <div class="production-line" aria-label="当前批次处理进度">
+              <div class="production-line" aria-label="本次任务处理进度">
                 <div class="line-stage is-complete"><span>✓</span><b>读入原片</b><small>2 个文件</small></div>
                 <div class="line-connector is-complete"></div>
                 <div class="line-stage is-complete"><span>✓</span><b>智能切分</b><small>16 个片段</small></div>
                 <div class="line-connector is-complete"></div>
                 <div class="line-stage is-current"><span>3</span><b>分类校对</b><small id="lineIssueLabel">2 个待处理</small></div>
                 <div class="line-connector"></div>
-                <div class="line-stage"><span>4</span><b>清除字幕</b><small>等待校对</small></div>
+                <div class="line-stage"><span>4</span><b>硬字幕检查</b><small>不牺牲原画</small></div>
                 <div class="line-connector"></div>
                 <div class="line-stage"><span>5</span><b>素材归档</b><small>未开始</small></div>
               </div>
@@ -204,7 +204,7 @@
               </button>
               <button class="rule-row" data-route="settings">
                 <span class="rule-icon">盘</span>
-                <div><strong>保存到款号目录</strong><p>D:\抖音素材库\S2026-08\批次01</p></div>
+                <div><strong>保存到款号目录</strong><p>D:\抖音素材库\918\03_细节讲解</p></div>
                 <span>›</span>
               </button>
               <div class="panel-footer">
@@ -225,7 +225,7 @@
             <button class="batch-row" data-batch-row="K172-07 · 褶皱西裤 02">
               <span class="batch-thumb"><img src="assets/video2-front.jpg" alt=""></span>
               <span><strong>K172-07</strong><small>褶皱西裤 02 · 1 个原视频</small></span>
-              <span><small>当前步骤</small><strong>清除字幕</strong></span>
+              <span><small>当前检查</small><strong>硬字幕与原画清晰度</strong></span>
               <span class="row-progress"><i class="progress-84"></i><small>84%</small></span>
               <span class="row-action">继续 ›</span>
             </button>
@@ -264,10 +264,10 @@
         <section class="screen" id="screen-import" data-screen="import">
           <div class="two-column-form">
             <section class="form-panel">
-              <div class="section-heading"><div><p class="eyebrow">上传视频</p><h2>建立素材批次</h2><p>款号决定最终保存目录，批次名用于区分不同拍摄。</p></div></div>
+              <div class="section-heading"><div><p class="eyebrow">上传视频</p><h2>归入款号素材库</h2><p>款号决定一级目录，分析后直接进入人物穿搭、细节讲解等内容分类。</p></div></div>
               <div class="form-grid">
                 <label>款号 <input id="skuInput" value="" autocomplete="off"></label>
-                <label>批次名称 <input id="batchNameInput" value="" autocomplete="off"></label>
+                <label>任务备注（可选） <input id="batchNameInput" value="" autocomplete="off" placeholder="仅用于追溯"></label>
               </div>
               <button class="drop-zone" id="dropZone" type="button">
                 <span class="drop-icon">＋</span><strong>添加原视频</strong><small>点击选择或拖入 MP4、MOV 文件，可一次导入多个</small>
@@ -284,14 +284,14 @@
                 <li><span>1</span><div><strong>分析人物、服装和镜头变化</strong><small>原视频保持不变，只读取内容。</small></div></li>
                 <li><span>2</span><div><strong>切分并执行 2 秒下限</strong><small>短片段自动合并或标为不可用。</small></div></li>
                 <li><span>3</span><div><strong>清除原字幕并分类</strong><small>结果需要你快速检查一次。</small></div></li>
-                <li><span>4</span><div><strong>保存到款号目录</strong><small id="importPathPreview">D:\抖音素材库\S2026-08\神裤测评 01</small></div></li>
+                <li><span>4</span><div><strong>按款号和内容分类保存</strong><small id="importPathPreview">D:\抖音素材库\918</small></div></li>
               </ol>
               <div class="batch-model-status" id="batchModelStatus" role="status" aria-live="polite">
                 <span class="model-status-icon">AI</span>
                 <span><strong>视觉分类模型待检查</strong><small>开始前会验证千问 API Key 与模型设置。</small></span>
                 <button type="button" data-open-model-settings>配置</button>
               </div>
-              <label class="check-row"><input id="keepOriginals" type="checkbox" checked><span><strong>复制原视频到批次目录</strong><small>建议开启，方便追溯与重新处理。</small></span></label>
+              <label class="check-row"><input id="keepOriginals" type="checkbox" checked><span><strong>保留本次原视频副本</strong><small>仅用于追溯与重新处理，不参与款号内容分类。</small></span></label>
               <button class="button primary full" id="startAnalysisButton">开始分析 2 个视频</button>
               <button class="button text full" data-route="source">取消，返回原素材处理</button>
             </aside>
@@ -310,6 +310,7 @@
               <button class="filter-button" data-filter="review">测评对比 <span>5</span></button>
               <button class="filter-button" data-filter="action">动作展示 <span>0</span></button>
               <button class="filter-button" data-filter="speech">口播 <span>0</span></button>
+              <button class="filter-button" data-filter="upper_related">上衣相关 <span>0</span></button>
               <button class="filter-button" data-filter="other">其他 <span>0</span></button>
             </div>
             <div class="toolbar-actions">
@@ -353,7 +354,7 @@
             </section>
 
             <aside class="clip-inspector" aria-labelledby="clipInspectorTitle">
-              <div class="inspector-preview" id="inspectorPreview"><video id="inspectorVideo" controls muted playsinline preload="metadata" hidden></video><img id="inspectorPreviewImage" src="assets/video1-detail.jpg" alt="选中片段预览"><button id="openPreviewButton" aria-label="放大播放选中片段">▶</button></div>
+              <div class="inspector-preview" id="inspectorPreview"><video id="inspectorVideo" controls muted playsinline preload="metadata" hidden></video><img id="inspectorPreviewImage" src="assets/video1-detail.jpg" alt="选中片段完整画幅预览"><button id="openPreviewButton" aria-label="打开全尺寸预览" title="打开全尺寸预览">▶</button></div>
               <div class="inspector-title"><small>当前片段</small><h2 id="clipInspectorTitle">坐姿到面料近景</h2><p id="clipTime">00:01.78 — 00:04.02</p><p class="clip-audio-state" id="clipAudioState">预览已静音 · 混剪会强制关闭素材原声</p></div>
               <label>内容分类
                 <select id="categorySelect">
@@ -378,26 +379,20 @@
         <section class="screen" id="screen-subtitle" data-screen="subtitle">
           <div class="subtitle-layout">
             <section class="subtitle-preview-panel">
-              <div class="section-heading"><div><p class="eyebrow">字幕检查</p><h2>检查字幕修复效果</h2></div><button class="text-button" id="toggleCompareButton">按住查看原画</button></div>
+              <div class="section-heading"><div><p class="eyebrow">字幕检查</p><h2>检查硬字幕与原画完整度</h2></div><button class="text-button" id="toggleCompareButton">按住查看原画</button></div>
               <div class="compare-stage" id="compareStage">
-                <div class="video-frame"><img id="subtitlePreviewImage" src="assets/video1-look.jpg" alt="字幕修复后预览"><span class="original-caption">这条裤子真的显高显瘦</span><div class="repair-mask"></div><button id="subtitlePlayButton" aria-label="播放预览">▶</button></div>
+                <div class="video-frame"><img id="subtitlePreviewImage" src="assets/video1-look.jpg" alt="原画保真预览"><span class="original-caption">检测到源片硬字幕</span><div class="repair-mask"></div><button id="subtitlePlayButton" aria-label="播放预览">▶</button></div>
                 <div class="frame-meta"><span><strong>黑 T 通勤正侧面</strong><small>00:07.32 — 00:11.32</small></span><span><b id="subtitleCurrent">1</b> / 14</span></div>
                 <div class="frame-nav"><button id="previousSubtitleClip">← 上一个</button><div class="mini-timeline"><i></i><i class="is-current"></i><i></i><i></i><i></i><i></i></div><button id="nextSubtitleClip">下一个 →</button></div>
               </div>
             </section>
             <aside class="subtitle-tools">
-              <h2>处理方式</h2>
-              <div class="strategy-tabs" role="group" aria-label="字幕处理策略">
-                <button class="is-active" data-strategy="repair">画面修复</button>
-                <button data-strategy="crop">安全裁切</button>
-                <button data-strategy="blur">区域模糊</button>
-              </div>
-              <div class="strategy-copy"><strong id="strategyTitle">智能补全字幕覆盖区域</strong><p id="strategyText">适合字幕没有大面积遮挡服装主体的镜头。</p></div>
-              <label class="range-label"><span>修复范围上下扩展 <b id="maskRangeValue">12 px</b></span><input id="maskRange" type="range" min="0" max="40" value="12"></label>
+              <h2>原画优先规则</h2>
+              <div class="strategy-copy"><strong id="strategyTitle">保持完整构图并阻断</strong><p id="strategyText">检测到硬字幕时不裁切、不放大、不使用拉丝滤镜；等待无字幕源片或真正的视频补全能力。</p></div>
               <label class="check-row"><input id="showMaskToggle" type="checkbox"><span><strong>显示检测遮罩</strong><small>只影响预览，不写入最终视频。</small></span></label>
-              <div class="quality-note"><span>✓</span><p><strong>当前片段通过检查</strong><small>服装主体完整，字幕区域无明显残影。</small></p></div>
-              <button class="button secondary full" id="applyAllSubtitlesButton">应用到同位置的 8 个片段</button>
-              <button class="button primary full" id="finishSubtitleButton">确认 14 个片段并继续</button>
+              <div class="quality-note"><span>!</span><p><strong>当前片段已阻断</strong><small>原画清晰度合格，但源片硬字幕仍然存在。</small></p></div>
+              <button class="button secondary full" id="applyAllSubtitlesButton">保持原画并阻断同类片段</button>
+              <button class="button primary full" id="finishSubtitleButton">保存检查结果</button>
             </aside>
           </div>
         </section>
@@ -434,7 +429,7 @@
               <p class="eyebrow">生成前检查</p><h2>素材已经够用</h2>
               <div class="mix-cover"><img src="assets/video1-look.jpg" alt="混剪封面预览"><span>9:16 · 1080×1920</span></div>
               <dl><div><dt>预计时长</dt><dd>45 秒</dd></div><div><dt>使用片段</dt><dd>11 / 14</dd></div><div><dt>预计生成</dt><dd>约 2 分钟</dd></div></dl>
-              <div class="selection-summary"><span>脚本</span><strong id="selectedScript">神裤测评 · 45秒</strong><span>配音</span><strong id="selectedVoice">自然女声</strong><span>音乐</span><strong id="selectedMusic">轻快通勤</strong></div>
+              <div class="selection-summary"><span>脚本</span><strong id="selectedScript">神裤测评 · 45秒</strong><span>配音</span><strong id="selectedVoice">真人短种草</strong><span>音乐</span><strong id="selectedMusic">轻快通勤</strong></div>
               <button class="button primary full" id="generateMixButton">开始混剪</button>
               <button class="button text full" data-route="cleanup">返回检查素材</button>
             </aside>
@@ -445,16 +440,16 @@
         <section class="screen" id="screen-export" data-screen="export">
           <div class="export-layout">
             <section class="export-main">
-              <div class="section-heading"><div><p class="eyebrow">千川成片包</p><h2>AI 质检通过后统一导出</h2><p>文件名、检查报告和输出参数随任务一起保存，关闭软件后记录仍保留。</p></div><button class="button primary" data-route="editing">＋ 新建成片任务</button></div>
+              <div class="section-heading"><div><p class="eyebrow">成片文件包</p><h2>发布前检查通过后统一导出</h2><p>文件名、检查报告和输出参数随任务一起保存，关闭软件后记录仍保留。</p></div><button class="button primary" data-route="editing">＋ 新建成片任务</button></div>
               <div id="exportJobList" class="export-job-list" aria-live="polite">
                 <article class="export-job is-done">
                   <div class="export-thumb"><img src="assets/video1-look.jpg" alt="神裤测评成片封面"><span>00:45</span></div>
-                  <div class="export-copy"><span class="status-pill success">✓ AI 质检通过</span><h3>S2026-08_神裤测评_千川版01.mp4</h3><p>1080×1920 · 9:16 · H.264 · 今天 01:42</p><div class="quality-mini-tags"><span>千问画文检查</span><span>音轨存在</span><span>风险词通过</span><span>平台规格通过</span></div><div class="job-actions"><button data-toast="将在资源管理器中定位成片文件">打开文件位置</button><button data-open-dialog="aiReportDialog">查看质检报告</button><button data-open-dialog="previewDialog">播放成片</button></div></div>
+                  <div class="export-copy"><span class="status-pill success">✓ AI 质检通过</span><h3>S2026-08_神裤测评_商品卡版01.mp4</h3><p>1080×1920 · 9:16 · H.264 · 今天 01:42</p><div class="quality-mini-tags"><span>千问画文检查</span><span>音轨存在</span><span>风险词通过</span><span>平台规格通过</span></div><div class="job-actions"><button data-toast="将在资源管理器中定位成片文件">打开文件位置</button><button data-open-dialog="aiReportDialog">查看质检报告</button><button data-open-dialog="previewDialog">播放成片</button></div></div>
                 </article>
               </div>
             </section>
             <aside class="export-settings export-lock-panel">
-              <span class="locked-label">统一锁定</span><h2>千川竖屏输出</h2>
+              <span class="locked-label">统一锁定</span><h2>抖音竖屏输出</h2>
               <dl><div><dt>画幅</dt><dd>9:16 竖屏</dd></div><div><dt>分辨率</dt><dd>1080×1920</dd></div><div><dt>容器</dt><dd>MP4</dd></div><div><dt>视频编码</dt><dd>H.264 高质量</dd></div><div><dt>帧率</dt><dd>30 fps</dd></div><div><dt>音频</dt><dd>AAC · 48 kHz</dd></div></dl>
               <div class="export-gate-stamp"><span>AI</span><div><strong>四项质检通过</strong><small>才会写入正式导出目录</small></div></div>
               <button class="button secondary full" data-toast="将在资源管理器中打开 D:\抖音素材库\S2026-08\成片">打开成片目录</button>
@@ -470,7 +465,7 @@
             <input id="libraryFileInput" type="file" accept="video/*,audio/*,image/*" multiple hidden>
           </div>
           <div class="library-toolbar">
-            <label class="library-search"><span aria-hidden="true">⌕</span><input id="librarySearch" type="search" placeholder="搜索素材名称、款号或来源批次" aria-label="搜索素材"></label>
+            <label class="library-search"><span aria-hidden="true">⌕</span><input id="librarySearch" type="search" placeholder="搜索素材名称、款号或内容分类" aria-label="搜索素材"></label>
             <div class="filter-group" id="libraryFilters" role="group" aria-label="素材类型筛选">
               <button class="filter-button is-active" data-library-filter="all">全部 <span id="libraryAllCount">7</span></button>
               <button class="filter-button" data-library-filter="outfit">人物穿搭</button>
@@ -479,6 +474,7 @@
               <button class="filter-button" data-library-filter="review">测评对比</button>
               <button class="filter-button" data-library-filter="action">动作展示</button>
               <button class="filter-button" data-library-filter="speech">口播</button>
+              <button class="filter-button" data-library-filter="upper_related">上衣相关</button>
               <button class="filter-button" data-library-filter="other">其他</button>
               <button class="filter-button" data-library-filter="external">外部素材</button>
             </div>
@@ -488,7 +484,7 @@
             <aside class="folder-tree" aria-label="素材目录">
               <button class="is-active" data-folder="S2026-08"><span>▣</span><span><strong>S2026-08</strong><small>神裤测评 01</small></span><b>5</b></button>
               <button data-folder="K172-07"><span>▣</span><span><strong>K172-07</strong><small>褶皱西裤 02</small></span><b>2</b></button>
-              <button data-folder="all"><span>◫</span><span><strong>全部款号</strong><small>跨批次查看</small></span></button>
+              <button data-folder="all"><span>◫</span><span><strong>全部款号</strong><small>跨款号查看</small></span></button>
               <button data-folder="unusable"><span>!</span><span><strong>不可用</strong><small>不会参与混剪</small></span><b>2</b></button>
             </aside>
             <section class="material-table-panel">
@@ -523,7 +519,7 @@
                 </div>
 
                 <section class="production-panel is-active" data-production-panel="1">
-                  <div class="production-panel-head"><div><p class="eyebrow">画面素材</p><h2>选择这次要使用的素材</h2><p>可以使用选材篮或按款号加载；短于 2 秒和不可用的片段不会加入。</p></div><button class="button secondary" id="openMaterialPicker">＋ 从素材库添加</button></div>
+                  <div class="production-panel-head"><div><p class="eyebrow">画面素材</p><h2>选择这次要使用的素材</h2><p>这里读取素材分类板块已经人工确认的结果；勾选只代表本次使用，不重新检测、过滤或修改分类。</p></div><button class="button secondary" id="openMaterialPicker">＋ 从素材库添加</button></div>
                   <div class="mix-sku-loader"><label>按款号快速加载 <select id="mixSkuSelect"><option value="S2026-08">S2026-08</option><option value="K172-07">K172-07</option><option value="all">全部款号</option></select></label><button class="button secondary" id="loadSkuMaterials">加载该款素材</button><button class="button danger-text" id="clearMixMaterials">清空选材篮</button></div>
                   <div class="editing-timeline large-timeline" id="editingTimeline" aria-live="polite"></div>
                   <div class="coverage-bar"><span><b id="materialCoverageCount">4</b> 个可用片段</span><span>人物穿搭、细节讲解、测评讲解均已覆盖</span><button class="button primary" data-go-production-step="2">选择脚本</button></div>
@@ -537,8 +533,8 @@
                     <button class="asset-delete compact-delete" id="clearEditingScript">删除引用</button>
                   </div>
                   <div class="copy-precheck">
-                    <div><span class="gate-icon">AI</span><div><strong>文案预检</strong><small>检查极限表达、违禁词、承诺性用语和商品信息冲突</small></div></div>
-                    <span class="status-pill success" id="scriptPrecheckStatus">✓ 可进入生成</span>
+                    <div><span class="gate-icon">AI</span><div><strong>文案预检</strong><small>提前记录极限表达、违禁词和商品信息冲突，不阻止候选生成</small></div></div>
+                    <span class="status-pill success" id="scriptPrecheckStatus">✓ 可生成候选</span>
                     <button class="button secondary" id="runScriptPrecheck">重新检查</button>
                   </div>
                   <div class="script-slot-preview"><span>痛点开场 · 5 秒</span><span>正侧面上身 · 10 秒</span><span>面料和版型 · 15 秒</span><span>多套搭配 · 10 秒</span><span>结论与行动 · 5 秒</span></div>
@@ -549,9 +545,11 @@
                   <div class="production-panel-head"><div><p class="eyebrow">声音与音乐</p><h2>添加配音和背景音乐</h2><p>支持全程口播、部分口播和纯音乐；脚本不需要口播时可以不添加配音。</p></div></div>
                   <div class="mix-voice-mode" id="mixVoiceModeStatus"><span>当前脚本声音模式</span><strong>全程口播</strong><small>脚本管理中可以改为部分口播或纯音乐。</small></div>
                   <div class="ai-voice-grid" role="radiogroup" aria-label="AI 配音选择">
-                    <button class="ai-voice-card is-selected" data-ai-voice="自然女声"><span class="voice-avatar">然</span><span><strong>自然女声</strong><small>清晰自然 · 适合测评</small></span><i>试听</i></button>
-                    <button class="ai-voice-card" data-ai-voice="轻熟女声"><span class="voice-avatar">轻</span><span><strong>轻熟女声</strong><small>稳重松弛 · 适合通勤</small></span><i>试听</i></button>
-                    <button class="ai-voice-card" data-ai-voice="知性女声"><span class="voice-avatar">知</span><span><strong>知性女声</strong><small>信息清楚 · 适合讲解</small></span><i>试听</i></button>
+                    <button class="ai-voice-card is-selected" data-ai-voice="真人短种草"><span class="voice-avatar">短</span><span><strong>真人短种草</strong><small>20–35秒 · 痛点、证据、场景、克制收口</small></span><i>生成试听</i></button>
+                    <button class="ai-voice-card" data-ai-voice="真人深测评"><span class="voice-avatar">深</span><span><strong>真人深测评</strong><small>60秒以上 · 边看边说、允许中性观察</small></span><i>生成试听</i></button>
+                    <button class="ai-voice-card" data-ai-voice="中性测评·四月"><span class="voice-avatar">中</span><span><strong>中性测评 · 四月</strong><small>官方系统音色 · 不甜不嗲，平衡自然</small></span><i>生成试听</i></button>
+                    <button class="ai-voice-card" data-ai-voice="率性变音·月白"><span class="voice-avatar">率</span><span><strong>率性变音 · 月白</strong><small>官方系统音色 · 中性低频，辨识度更强</small></span><i>生成试听</i></button>
+                    <button class="ai-voice-card" data-ai-voice="设计师变音·不吃鱼"><span class="voice-avatar">设</span><span><strong>设计师变音 · 不吃鱼</strong><small>官方系统音色 · 常见短视频变音感觉</small></span><i>生成试听</i></button>
                   </div>
                   <div class="audio-section production-audio">
                     <div class="audio-track"><div class="track-label"><span>声</span><div><strong>自定义配音</strong><small>可选，添加后替代 AI 配音</small></div></div><div class="track-assets" id="voiceTrackList"></div><button class="track-add" id="addVoiceAsset">＋ 添加配音</button><input id="voiceFileInput" type="file" accept="audio/*" hidden></div>
@@ -561,20 +559,25 @@
                 </section>
 
                 <section class="production-panel" data-production-panel="4" hidden>
-                  <div class="production-panel-head"><div><p class="eyebrow">AI 剪辑师</p><h2>先按素材能力安排镜头，再设置生成数量</h2><p>本机 Qwen 会逐段核对脚本与所选素材；没有拉伸、下蹲等证据时会提出替代镜头和改词建议。</p></div><span class="local-model-badge">本机 · Qwen 3.5</span></div>
+                  <div class="production-panel-head"><div><p class="eyebrow">剪辑智能体</p><h2>按脚本逐句从已确认分类中选镜</h2><p id="aiEditorRouteDescription">先理解每句话的作用，再选择对应的细节、穿搭、整体或动作素材；配音、字幕和镜头共用同一份时间线。</p></div><span class="local-model-badge" id="aiEditorRouteBadge">智能混合 · Plus</span></div>
                   <section class="ai-editor-planner" aria-labelledby="ai-editor-planner-title">
                     <div class="ai-editor-planner-head">
                       <span class="ai-editor-mark" aria-hidden="true">AI</span>
-                      <div><h3 id="ai-editor-planner-title">剪辑决策单</h3><p>AI 只规划本次勾选的素材；确认后 FFmpeg 才会按这份时间线执行。</p></div>
+                      <div><h3 id="ai-editor-planner-title">逐句剪辑决策单</h3><p>素材分类结果只读；时间线可执行即可先生成候选，风险项在成片报告中继续修改。</p></div>
                       <span class="status-pill" id="aiEditorPlanStatus">等待安排</span>
                       <button class="button primary" id="planWithAiEditor" type="button">让 AI 剪辑师安排</button>
+                    </div>
+                    <div class="ai-editor-context-grid" aria-live="polite">
+                      <section class="ai-editor-context-card" id="aiEditorCatalogSummary"><small>素材分类清单</small><strong>等待读取当前款号</strong><p>人工确认结果完整读取 · 不二次筛选</p></section>
+                      <section class="ai-editor-context-card" id="aiEditorLearningSummary"><small>用户投喂案例</small><strong>等待检索</strong><p>只学习结构、切法和节奏，不复用参考商品事实</p></section>
                     </div>
                     <div class="ai-editor-plan-preview" id="aiEditorPlanPreview" aria-live="polite">
                       <div class="ai-editor-empty"><strong>还没有剪辑方案</strong><small>先确认素材和脚本，再让本地 Qwen 逐段选镜。</small></div>
                     </div>
                     <div class="ai-editor-plan-actions">
-                      <p id="aiEditorPlanHint">生成前必须查看并确认剪辑决策单。</p>
+                      <p id="aiEditorPlanHint">查看并确认可执行时间线后，先生成候选成片。</p>
                       <button class="button secondary" id="replanWithAiEditor" type="button" hidden>重新安排</button>
+                      <button class="button danger-text" id="rejectAiEditorPlan" type="button" hidden>拒绝这份安排</button>
                       <button class="button primary" id="confirmAiEditorPlan" type="button" disabled>确认采用这份安排</button>
                     </div>
                   </section>
@@ -583,13 +586,13 @@
                     <div class="locked-export-card"><span class="lock-mark">锁</span><div><small>统一导出规格</small><strong>1080 × 1920 · 9:16</strong><p>MP4 · H.264 · 30 fps · AAC</p></div><span class="locked-label">不可修改</span></div>
                   </div>
                   <div class="variation-section"><h3>生成差异策略</h3><div class="variation-grid"><label><input type="checkbox" checked><span><strong>遵循 AI 镜头角色</strong><small>不打乱脚本与证据对应关系</small></span></label><label><input type="checkbox" checked><span><strong>同角色素材轮换</strong><small>只在同一段落候选中变化</small></span></label><label><input type="checkbox" checked><span><strong>音乐起点变化</strong><small>每条随机偏移节拍</small></span></label><label><input type="checkbox" checked><span><strong>字幕版式微调</strong><small>不影响品牌一致性</small></span></label></div></div>
-                  <div class="delivery-target"><span>投放目标</span><strong>抖音千川 · 商品卡视频</strong><small>生成后必须经过 AI 合规闸门</small></div>
-                  <div class="panel-actions"><button class="button secondary" data-go-production-step="3">返回</button><button class="button primary" id="startConnectedMix" disabled>按已确认方案生成并逐条质检</button></div>
+                  <div class="delivery-target"><span>生成原则</span><strong>先生成候选，再检查修改</strong><small>100 分只决定成片是否进入可投放目录，不会阻止候选成片生成</small></div>
+                  <div class="panel-actions"><button class="button secondary" data-go-production-step="3">返回</button><button class="button primary" id="startConnectedMix" disabled>先生成候选成片并检查</button></div>
                 </section>
 
                 <section class="production-panel" data-production-panel="5" hidden>
                   <div class="production-panel-head"><div><p class="eyebrow">生成结果</p><h2>查看成片和检查结果</h2><p>千问读取成片关键帧、可见字幕和脚本；本地规则核对文案风险和输出规格。</p></div><span class="quality-model-badge">视觉 + 规则检查</span></div>
-                  <div class="quality-summary" id="qualitySummary"><div><small>待检查</small><strong id="pendingOutputCount">0</strong></div><div><small>已通过</small><strong id="passedOutputCount">0</strong></div><div><small>需要修复</small><strong id="riskOutputCount">0</strong></div><div><small>输出规格</small><strong>1080P</strong></div></div>
+                  <div class="quality-summary" id="qualitySummary"><div><small>候选成片</small><strong id="pendingOutputCount">0</strong></div><div><small>可投放</small><strong id="passedOutputCount">0</strong></div><div><small>已生成 · 待修改</small><strong id="riskOutputCount">0</strong></div><div><small>输出规格</small><strong>1080P</strong></div></div>
                   <div class="batch-output-list" id="batchOutputList" aria-live="polite"><div class="quality-empty"><span>AI</span><h3>还没有生成结果</h3><p>返回生成设置，选择数量后开始混剪。</p><button class="button secondary" data-go-production-step="4">返回生成设置</button></div></div>
                   <div class="panel-actions"><button class="button secondary" id="repairAllOutputs" disabled>一键修复风险项</button><button class="button primary" id="exportPassedOutputs" disabled>导出全部通过成片</button></div>
                 </section>
@@ -597,10 +600,10 @@
 
               <aside class="editing-output quality-gate-panel">
                 <div class="output-preview"><img src="assets/video1-look.jpg" alt="成片预览"><button id="playEditingPreview" aria-label="播放成片预览">▶</button><span>9:16 · 1080P</span></div>
-                <div class="quality-gate-title"><span>AI</span><div><small>发布前闸门</small><h2>千川成片检查</h2></div></div>
+                <div class="quality-gate-title"><span>AI</span><div><small>投放前检查</small><h2>成片质量检查</h2></div></div>
                 <ul class="readiness-list"><li><span>✓</span><div><strong>脚本与商品</strong><small id="readinessScript">神裤测评 · 45 秒</small></div></li><li><span>✓</span><div><strong>画面素材</strong><small id="readinessMaterial">4 个片段，均 ≥ 2 秒</small></div></li><li><span>✓</span><div><strong>配音与音乐</strong><small id="readinessAudio">自然女声 · 音乐已添加</small></div></li><li><span>✓</span><div><strong>计划生成</strong><small id="readinessOutputCount">3 条视频</small></div></li><li class="is-missing"><span>!</span><div><strong>AI 剪辑方案</strong><small id="readinessPlan">等待逐段安排并确认</small></div></li><li><span>✓</span><div><strong>导出格式</strong><small>1080×1920 · 9:16</small></div></li></ul>
                 <div class="gate-check-list"><span>千问画面与文案</span><span>口播模式与音轨</span><span>极限词与违禁词</span><span>抖音技术规格</span></div>
-                <p class="gate-note">规则库按版本记录；AI 用于发布前筛查，风险项仍保留人工复核入口。</p>
+                <p class="gate-note">先生成候选，再按报告修改；评分只决定可投放状态。缺文件、空时间线等无法渲染的错误仍会停止任务。</p>
               </aside>
             </div>
           </div>
@@ -609,17 +612,18 @@
         <!-- Script management -->
         <section class="screen" id="screen-scripts" data-screen="scripts">
           <div class="module-intro">
-            <div><p class="eyebrow">脚本库</p><h2>管理可以重复使用的视频脚本</h2><p>可以新建脚本，也可以分析竞品视频后生成可编辑草稿。</p></div>
-            <div class="action-row"><button class="button secondary" id="addCompetitorButton">分析竞品视频</button><button class="button primary" id="createScriptButton">＋ 新建脚本</button></div>
+            <div><p class="eyebrow">脚本库</p><h2>管理脚本和你认可的市场剪辑思路</h2><p>可以新建脚本，也可以投喂参考成品，让智能体学习钩子、镜头顺序、切点和节奏。</p></div>
+            <div class="action-row"><button class="button secondary" id="addCompetitorButton">市场脚本学习</button><button class="button primary" id="createScriptButton">＋ 新建脚本</button></div>
           </div>
           <section class="competitor-analysis-panel" id="competitorAnalysisPanel" hidden>
-            <div class="section-heading"><div><p class="eyebrow">竞品视频 → 可复用脚本</p><h2>竞品分析任务</h2><p>识别镜头顺序、画面类型、可见字幕、节奏和转场；AI 结果生成草稿后仍可逐段修改。</p></div><button class="button secondary" id="chooseCompetitorVideo">＋ 添加竞品视频</button></div>
+            <div class="section-heading"><div><p class="eyebrow">你投喂的视频 → 可复用剪辑配方</p><h2>市场脚本学习</h2><p>识别开头钩子、镜头角色、切点、口播、字幕、节奏和转场；分析后可以编辑脚本并设为金标。</p></div><button class="button secondary" id="chooseCompetitorVideo">＋ 添加参考视频</button></div>
+            <div class="market-learning-policy"><span>只学你上传</span><p>不会联网搜索、抓取或下载市场视频；拖入即表示该文件由你提供且拥有使用或分析授权。</p></div>
             <button class="competitor-drop-zone" id="competitorDropZone" type="button" aria-describedby="competitorDropHint">
               <span class="competitor-drop-icon" aria-hidden="true">↑</span>
-              <span><strong>拖动上传竞品素材</strong><small id="competitorDropHint">把 MP4、MOV 或 MKV 视频拖到这里，也可点击选择；支持一次添加多个。</small></span>
+              <span><strong>把参考成品拖到这里</strong><small id="competitorDropHint">支持 MP4、MOV、MKV、M4V、WebM；可以一次添加多个，每个任务都可暂停、继续、重试或删除。</small></span>
               <span class="competitor-drop-action" aria-hidden="true">选择视频</span>
             </button>
-            <div class="competitor-analysis-list" id="competitorAnalysisList" aria-live="polite"><div class="competitor-empty"><strong>还没有竞品视频</strong><small>添加后再开始视觉结构分析；未配置千问时会明确阻止，不生成假结果。</small></div></div>
+            <div class="competitor-analysis-list" id="competitorAnalysisList" aria-live="polite"><div class="competitor-empty"><strong>还没有投喂参考视频</strong><small>添加你认可的成品后开始结构分析；未配置可用模型时会明确停止，不生成假结果。</small></div></div>
             <input id="competitorFileInput" type="file" accept="video/*,.mp4,.mov,.mkv,.m4v,.webm" multiple hidden>
           </section>
           <div class="script-manager-layout">
@@ -642,6 +646,7 @@
           <div class="settings-layout">
             <nav class="settings-nav" aria-label="设置分类">
               <button class="is-active" data-settings-tab="storage">素材与存储</button>
+              <button data-settings-tab="product">商品资料卡</button>
               <button data-settings-tab="rules">处理规则</button>
               <button data-settings-tab="model">大模型</button>
               <button data-settings-tab="ai-review">AI 质检</button>
@@ -654,34 +659,75 @@
                 <p class="eyebrow">素材与存储</p><h2>决定文件保存在哪里</h2>
                 <label>素材盘目录 <span class="path-field"><input id="materialRootInput" value="D:\抖音素材库" readonly><button id="chooseMaterialRoot" type="button">选择目录</button></span></label>
                 <label>缓存目录 <span class="path-field"><input value="D:\抖音素材缓存" readonly><button data-toast="此处会调用 Windows 目录选择器">选择目录</button></span></label>
-                <label class="check-row"><input type="checkbox" checked><span><strong>按款号和批次自动建目录</strong><small>例如：S2026-08\2026-08-17_批次01</small></span></label>
-                <label class="check-row"><input type="checkbox" checked><span><strong>保留每批次的 manifest.json</strong><small>记录分类、时间点、模型与处理参数。</small></span></label>
+                <label class="check-row"><input type="checkbox" checked disabled><span><strong>按款号和内容分类建目录</strong><small>例如：918\01_人物穿搭、918\03_细节讲解</small></span></label>
+                <label class="check-row"><input type="checkbox" checked disabled><span><strong>保留内部任务记录</strong><small>记录分类、时间点、模型与处理参数，不生成日期素材目录。</small></span></label>
+              </div>
+              <div class="settings-pane" data-settings-pane="product">
+                <div class="product-profile-heading">
+                  <div><p class="eyebrow">目标商品</p><h2>告诉 AI 这次卖的是哪一款</h2><p class="settings-lead">资料卡用于拦截错款画面和无证据文案。参考图、可用卖点和待核实信息都可以随时删除。</p></div>
+                  <button class="button primary" id="newProductProfile" type="button">＋ 新建资料卡</button>
+                </div>
+                <div class="product-profile-layout">
+                  <aside class="product-profile-library" aria-label="商品资料卡列表">
+                    <label class="product-profile-search">搜索款号或名称<input id="productProfileSearch" type="search" autocomplete="off" placeholder="例如：918"></label>
+                    <div class="product-profile-list" id="productProfileList"><div class="product-profile-empty">还没有商品资料卡。</div></div>
+                  </aside>
+                  <section class="product-profile-editor" aria-labelledby="productProfileEditorTitle">
+                    <div class="product-profile-editor-head"><div><small>当前资料卡</small><h3 id="productProfileEditorTitle">新建商品资料卡</h3></div><span class="profile-required-badge">款号必填</span></div>
+                    <div class="product-profile-form-grid">
+                      <label>款号<input id="productProfileSku" autocomplete="off" placeholder="例如：918"></label>
+                      <label>商品名称<input id="productProfileName" autocomplete="off" placeholder="例如：高腰垂感西裤"></label>
+                      <label>品类<input id="productProfileCategory" autocomplete="off" placeholder="例如：女装 / 西裤"></label>
+                      <label>颜色<input id="productProfileColor" autocomplete="off" placeholder="例如：黑色、深灰"></label>
+                      <label>版型<input id="productProfileSilhouette" autocomplete="off" placeholder="例如：高腰、直筒、阔腿"></label>
+                      <label>面料<input id="productProfileFabric" autocomplete="off" placeholder="以吊牌或检测信息为准"></label>
+                    </div>
+                    <label>目标人群<input id="productProfileAudience" autocomplete="off" placeholder="例如：通勤女性、梨形身材；不要写未证实效果"></label>
+                    <section class="profile-collection">
+                      <div class="profile-collection-head"><div><strong>商品参考图</strong><small>AI 用于核对颜色、版型和商品身份</small></div><button class="button secondary" id="addProductReferences" type="button">＋ 添加图片</button></div>
+                      <div class="profile-reference-list" id="productReferenceList"><div class="profile-collection-empty">暂未添加参考图</div></div>
+                    </section>
+                    <section class="profile-collection">
+                      <div class="profile-collection-head"><div><strong>允许使用的卖点</strong><small>只填写已有商品资料或画面可以证明的内容</small></div></div>
+                      <div class="profile-add-row"><input id="allowedClaimInput" autocomplete="off" placeholder="例如：高腰直筒"><button class="button secondary" id="addAllowedClaim" type="button">添加</button></div>
+                      <div class="profile-chip-list" id="allowedClaimList"><span class="profile-collection-empty">暂未添加卖点</span></div>
+                    </section>
+                    <section class="profile-collection is-warning">
+                      <div class="profile-collection-head"><div><strong>必须核实后才能说</strong><small>成分、效果、价格、销量和履约承诺建议放在这里</small></div></div>
+                      <div class="profile-add-row"><input id="verificationClaimInput" autocomplete="off" placeholder="例如：面料成分比例"><button class="button secondary" id="addVerificationClaim" type="button">添加</button></div>
+                      <div class="profile-chip-list" id="verificationClaimList"><span class="profile-collection-empty">暂未添加待核实项</span></div>
+                    </section>
+                    <div class="product-profile-actions"><button class="button danger-text" id="deleteProductProfile" type="button">删除整张资料卡</button><span id="productProfileSaveState" role="status" aria-live="polite"></span><button class="button primary" id="saveProductProfile" type="button">保存资料卡</button></div>
+                  </section>
+                </div>
               </div>
               <div class="settings-pane" data-settings-pane="rules">
                 <p class="eyebrow">处理规则</p><h2>控制自动切分和质量门槛</h2>
                 <div class="setting-locked"><span><strong>最短片段时长</strong><small>正式素材不能短于这个值</small></span><b>2.0 秒 · 已锁定</b></div>
-                <label>原字幕处理 <select id="captionModeSelect"><option value="smart_mask" selected>多帧字幕像素遮罩（推荐）</option><option value="crop_reframe">主体重构裁切</option><option value="blur_band">字幕带柔化</option><option value="keep">保留原画面，仅分类</option></select></label>
+                <label>原字幕处理 <select id="captionModeSelect"><option value="smart_mask" selected>4fps 检测 + GPU 修复 + 复杂图文分流（推荐）</option><option value="keep">保留原画面，仅分类</option></select></label>
+                <div class="setting-locked"><span><strong>复杂图文安全策略</strong><small>截图、贴纸、商品卡、放大镜、拼贴和大面积文字不强行涂抹主体。</small></span><b>低复用待复核</b></div>
                 <label class="check-row"><input type="checkbox" checked><span><strong>优先合并同类相邻片段</strong><small>镜头差异过大时仍会标记为不可用。</small></span></label>
                 <label class="check-row"><input type="checkbox" checked><span><strong>低置信度分类需要人工确认</strong><small>低于 85% 时出现在待处理列表。</small></span></label>
               </div>
               <div class="settings-pane" data-settings-pane="model">
-                <p class="eyebrow">视觉大模型</p><h2>让模型看懂片段后再分配素材</h2>
-                <p class="settings-lead">每个 2–9 秒片段会按时间顺序抽取画面，由千问识别人物穿搭、整体展示、细节讲解、测评对比、动作展示或口播；不会再按片段位置猜分类。</p>
+                <p class="eyebrow">混合 AI 中枢</p><h2>按任务选择模型，并由本地 Qwen 兜底</h2>
+                <p class="settings-lead">批量素材分类使用低成本视觉模型，对标分析和剪辑规划使用更强模型；所有模型都遵守同一份服装剪辑师证据规则。</p>
                 <div class="model-decision-card">
                   <span class="model-logo">Q</span>
-                  <span><strong>千问负责视频画面分类</strong><small>支持视频/多帧视觉输入与结构化 JSON 输出。</small></span>
-                  <b>当前主模型</b>
+                  <span><strong>云端千问负责主力分析</strong><small>Flash 批量分类，Plus 分析对标和规划镜头，Max 只处理疑难结果。</small></span>
+                  <b>质量主力</b>
                 </div>
                 <div class="model-decision-card is-secondary">
-                  <span class="model-logo">D</span>
-                  <span><strong>DeepSeek 负责后续文案推理</strong><small>当前官方 API 是纯文本输入，不用于识别视频画面。</small></span>
-                  <b>后续模块</b>
+                  <span class="model-logo">L</span>
+                  <span><strong>本机 Qwen3.5 负责隐私与故障兜底</strong><small>本地隐私模式下素材不出机；智能混合在云端失败时自动接手。</small></span>
+                  <b>本地兜底</b>
                 </div>
                 <div class="model-form-grid">
-                  <label>视觉分类服务
-                    <select id="aiProviderSelect">
-                      <option value="qwen" selected>通义千问（推荐）</option>
-                      <option value="deepseek" disabled>DeepSeek V4（不支持视觉输入）</option>
+                  <label>运行方式
+                    <select id="aiExecutionModeSelect">
+                      <option value="smart" selected>智能混合 · 推荐</option>
+                      <option value="cloud_accuracy">云端高精度</option>
+                      <option value="local_private">本地隐私 · 素材不出机</option>
                     </select>
                   </label>
                   <label>服务地域
@@ -690,15 +736,28 @@
                       <option value="international">国际 · 新加坡</option>
                     </select>
                   </label>
-                  <label>视觉模型
+                  <label>批量分类模型
                     <select id="qwenModelSelect">
-                      <option value="qwen3.5-flash" selected>qwen3.5-flash · 快速省成本</option>
-                      <option value="qwen3.5-plus">qwen3.5-plus · 更高精度</option>
-                      <option value="qwen3-vl-plus">qwen3-vl-plus · 专用视觉模型</option>
+                      <option value="qwen3.7-flash-2026-07-15" selected>qwen3.7-flash 07-15 · 稳定快照</option>
+                      <option value="qwen3.7-flash">qwen3.7-flash · 自动更新</option>
                     </select>
                   </label>
                   <label>每片段抽帧数
                     <select id="aiFramesSelect"><option value="3">3 帧 · 更省</option><option value="4" selected>4 帧 · 推荐</option><option value="6">6 帧 · 更细</option><option value="8">8 帧 · 最高</option></select>
+                  </label>
+                  <label>剪辑规划模型
+                    <select id="qwenEditorModelSelect">
+                      <option value="qwen3.7-plus-2026-05-26" selected>qwen3.7-plus 05-26 · 稳定快照</option>
+                      <option value="qwen3.7-plus">qwen3.7-plus · 自动更新</option>
+                    </select>
+                  </label>
+                  <label>疑难复核模型
+                    <select id="qwenReviewerModelSelect">
+                      <option value="qwen3.8-max" selected>qwen3.8-max · 只处理疑难</option>
+                    </select>
+                  </label>
+                  <label>本地兜底模型
+                    <input id="localEditorModelInput" value="qwen3.5:latest" autocomplete="off" spellcheck="false">
                   </label>
                 </div>
                 <label>千问 API Key
@@ -713,6 +772,8 @@
                 <label>人工复核阈值
                   <select id="aiConfidenceSelect"><option value="0.75">低于 75%</option><option value="0.85" selected>低于 85%（推荐）</option><option value="0.9">低于 90%</option><option value="0.95">低于 95%</option></select>
                 </label>
+                <label class="check-row"><input id="allowLocalModelFallback" type="checkbox" checked><span><strong>云端失败时转本地 Qwen</strong><small>只在智能混合模式生效；回退结果会记录模型并进入人工复核。</small></span></label>
+                <label class="check-row"><input id="allowPremiumEscalation" type="checkbox" checked><span><strong>疑难剪辑计划升级到 Max</strong><small>仅低置信度、结构冲突或不可执行时调用，普通批次不会产生 Max 费用。</small></span></label>
                 <label class="check-row warning-check"><input id="allowOfflineFallback" type="checkbox"><span><strong>模型失败时允许离线兜底</strong><small>默认关闭。开启后仅用旧规则临时分配，并强制标记“待人工复核”，不会伪装成 AI 分类。</small></span></label>
                 <div class="model-taxonomy"><strong>固定分类</strong><span>人物穿搭</span><span>整体展示</span><span>细节讲解</span><span>测评对比</span><span>动作展示</span><span>口播</span><span>其他</span></div>
               </div>
@@ -731,7 +792,7 @@
                 <div class="setting-locked"><span><strong>规则库版本</strong><small>每次质检报告记录所用版本，便于追溯。</small></span><b>自动更新 · 已启用</b></div>
               </div>
               <div class="settings-pane" data-settings-pane="export">
-                <p class="eyebrow">统一导出</p><h2>所有成片固定使用千川竖屏规格</h2>
+                <p class="eyebrow">统一导出</p><h2>所有成片固定使用抖音竖屏规格</h2>
                 <div class="setting-locked"><span><strong>画幅与分辨率</strong><small>不允许单个任务覆盖默认值。</small></span><b>9:16 · 1080×1920</b></div>
                 <div class="setting-locked"><span><strong>视频编码</strong><small>兼顾上传兼容性和成片清晰度。</small></span><b>MP4 · H.264 · 30 fps</b></div>
                 <div class="setting-locked"><span><strong>音频编码</strong><small>统一人声和音乐输出格式。</small></span><b>AAC · 48 kHz</b></div>
@@ -772,11 +833,20 @@
     </div>
   </div>
 
-  <dialog id="previewDialog" class="app-dialog">
-    <button class="dialog-close" data-close-dialog aria-label="关闭">×</button>
-    <div class="dialog-video"><video id="dialogPreviewVideo" controls muted playsinline preload="metadata" hidden></video><img id="dialogPreviewImage" src="assets/video1-look.jpg" alt="视频预览"><span id="dialogPreviewFallback">▶</span></div>
-    <h2 id="dialogPreviewTitle">片段预览</h2><p id="dialogPreviewMeta">00:07.32 — 00:11.32 · 4.00 秒</p>
-    <p class="preview-audio-note">素材预览和混剪均不播放原视频声音。</p>
+  <dialog id="previewDialog" class="app-dialog clip-preview-dialog" aria-labelledby="dialogPreviewTitle" aria-describedby="dialogPreviewMeta">
+    <div class="clip-preview-shell">
+      <div class="clip-preview-stage" aria-label="9:16 全尺寸素材预览">
+        <div class="dialog-video"><video id="dialogPreviewVideo" controls muted playsinline preload="metadata" hidden></video><img id="dialogPreviewImage" src="assets/video1-look.jpg" alt="视频完整画幅预览"><span id="dialogPreviewFallback">▶</span></div>
+      </div>
+      <div class="clip-preview-copy">
+        <button class="dialog-close" data-close-dialog aria-label="关闭全尺寸预览">×</button>
+        <p class="eyebrow">全尺寸预览</p>
+        <h2 id="dialogPreviewTitle">片段预览</h2>
+        <p id="dialogPreviewMeta">00:07.32 — 00:11.32 · 4.00 秒</p>
+        <p class="preview-audio-note">完整显示 9:16 原画，不放大、不裁切；素材预览和混剪均不播放原视频声音。</p>
+        <div class="clip-preview-specs" aria-label="预览规格"><span>完整画幅</span><span>静音预览</span><span>原比例显示</span></div>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="scriptDialog" class="app-dialog script-dialog">
@@ -809,8 +879,9 @@
       <div class="sku-option-list" id="skuOptionList" role="radiogroup" aria-label="已有款号" aria-live="polite"></div>
     </div>
     <div class="sku-new-row"><span>或</span><label>新建款号<input id="newSkuInput" autocomplete="off" placeholder="例如：918"></label></div>
-    <label class="sku-batch-label">批次名称<input id="skuBatchNameInput" autocomplete="off" placeholder="例如：8月21日晚间拍摄"></label>
+    <label class="sku-batch-label">任务备注（可选）<input id="skuBatchNameInput" autocomplete="off" placeholder="仅用于追溯本次上传"></label>
     <div class="sku-path-preview"><small>将保存到</small><strong id="skuPathPreview">请选择款号</strong></div>
+    <div class="sku-product-profile" id="skuProductProfileStatus"><span aria-hidden="true">商</span><div><strong>尚未选择款号</strong><small>选择后会检查目标商品资料卡</small></div><button type="button" id="editSkuProductProfile">编辑资料</button></div>
     <div class="dialog-actions"><button class="button secondary" type="button" data-close-dialog>返回上传</button><button class="button primary" id="confirmSkuAnalysis" type="button">确认款号并开始分析</button></div>
   </dialog>
 
@@ -839,7 +910,7 @@
 
   <dialog id="mixCompleteDialog" class="app-dialog mix-complete-dialog">
     <button class="dialog-close" data-close-dialog aria-label="关闭">×</button>
-    <div class="complete-mark">✓</div><p class="eyebrow">素材混剪完成</p><h2 id="mixCompleteTitle">成片与质检报告已经保存</h2>
+    <div class="complete-mark">✓</div><p class="eyebrow">候选生成完成</p><h2 id="mixCompleteTitle">候选成片与检查报告已保存</h2>
     <p id="mixCompleteSummary">已生成 0 条视频。</p>
     <label>混剪文件夹 <input id="mixCompleteFolder" readonly value="等待生成"></label>
     <div class="dialog-actions"><button class="button secondary" id="viewMixReports">查看质检结果</button><button class="button primary" id="openMixFolder">打开混剪文件夹</button></div>

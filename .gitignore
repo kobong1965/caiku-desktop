@@ -1,12 +1,15 @@
 # Dependencies and build outputs
 node_modules/
 release/
+release-final/
 output/
 .playwright-cli/
 
 # Generated media and local experiments
 _视频分析临时/
 _ai_editor_engine_test/
+analysis/
+__pycache__/
 *.log
 *.tmp
 

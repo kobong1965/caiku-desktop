@@ -32,6 +32,7 @@ test("更新功能只通过窄 preload IPC 暴露，主进程使用 GitHub updat
   const main = read("electron/main.cjs");
   const preload = read("electron/preload.cjs");
   const pkg = JSON.parse(read("package.json"));
+  const lock = JSON.parse(read("package-lock.json"));
 
   assert.match(main, /require\("electron-updater"\)/);
   assert.match(main, /safeHandle\("update:check"/);
@@ -41,7 +42,9 @@ test("更新功能只通过窄 preload IPC 暴露，主进程使用 GitHub updat
   assert.match(preload, /downloadUpdate: \(\) => invoke\("update:download"\)/);
   assert.match(preload, /installUpdate: \(\) => invoke\("update:install"\)/);
   assert.match(preload, /onUpdateStatus/);
-  assert.equal(pkg.version, "0.1.11");
+  assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+  assert.equal(lock.version, pkg.version);
+  assert.equal(lock.packages[""].version, pkg.version);
   assert.equal(pkg.dependencies["electron-updater"], "6.8.9");
   assert.deepEqual(pkg.build.publish[0], { provider: "github", owner: "kobong1965", repo: "caiku-desktop" });
 });

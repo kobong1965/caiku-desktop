@@ -35,6 +35,7 @@ let activeClip = document.querySelector("[data-clip].is-selected");
 let issueCount = 2;
 let pendingConfirmAction = null;
 let currentRoute = "source";
+let lastPreviewTrigger = null;
 
 function applyWindowState({ isMaximized = false } = {}) {
   document.body.classList.toggle("is-window-maximized", isMaximized);
@@ -68,8 +69,8 @@ function showToast(message, isError = false) {
 
 function showMixCompleteDialog(outputDir, successCount, failedCount = 0) {
   appState.mixOutputDir = outputDir || appState.mixOutputDir || "";
-  document.querySelector("#mixCompleteTitle").textContent = failedCount ? "混剪已完成，部分任务需要检查" : "成片与质检报告已经保存";
-  document.querySelector("#mixCompleteSummary").textContent = `成功 ${successCount} 条${failedCount ? `，失败 ${failedCount} 条` : ""}；可以打开文件夹或先查看逐条质检结果。`;
+  document.querySelector("#mixCompleteTitle").textContent = "候选成片已生成并完成检查";
+  document.querySelector("#mixCompleteSummary").textContent = `共生成 ${successCount + failedCount} 条候选成片；可投放 ${successCount} 条${failedCount ? `，待修改 ${failedCount} 条` : ""}。评分不会阻止生成，只决定是否进入可投放目录。`;
   document.querySelector("#mixCompleteFolder").value = appState.mixOutputDir || "输出目录等待桌面任务返回";
   const dialog = document.querySelector("#mixCompleteDialog");
   if (!dialog.open) dialog.showModal();
@@ -208,10 +209,9 @@ const fileInput = document.querySelector("#fileInput");
 const fileList = document.querySelector("#fileList");
 
 function updateImportPath() {
-  importPathPreview.textContent = `D:\\抖音素材库\\${skuInput.value || "未填写款号"}\\${batchNameInput.value || "未填写批次"}`;
+  importPathPreview.textContent = `D:\\抖音素材库\\${skuInput.value || "未填写款号"}`;
 }
 skuInput.addEventListener("input", updateImportPath);
-batchNameInput.addEventListener("input", updateImportPath);
 dropZone.addEventListener("click", () => fileInput.click());
 dropZone.addEventListener("dragover", (event) => { event.preventDefault(); dropZone.classList.add("is-dragging"); });
 dropZone.addEventListener("dragleave", () => dropZone.classList.remove("is-dragging"));
@@ -275,9 +275,9 @@ function runProgress(title, text, onDone) {
 }
 
 document.querySelector("#startAnalysisButton").addEventListener("click", () => {
-  if (!skuInput.value.trim() || !batchNameInput.value.trim()) {
-    showToast("请先填写款号和批次名称", true);
-    (!skuInput.value.trim() ? skuInput : batchNameInput).focus();
+  if (!skuInput.value.trim()) {
+    showToast("请先填写款号", true);
+    skuInput.focus();
     return;
   }
   if (!fileList.querySelector(".file-item")) {
@@ -285,11 +285,11 @@ document.querySelector("#startAnalysisButton").addEventListener("click", () => {
     dropZone.focus();
     return;
   }
-  runProgress("正在建立素材批次", "读取视频信息并创建本地目录…", () => {
-    currentBatchLabel.textContent = `${skuInput.value} · ${batchNameInput.value}`;
+  runProgress("正在分类素材", "读取视频信息并按款号、内容分类保存…", () => {
+    currentBatchLabel.textContent = skuInput.value;
     addProcessedBatchToLibrary?.();
     navigate("source");
-    showToast("批次已建立，视频分析已加入队列");
+    showToast("视频已加入分析，结果将直接归入款号内容分类");
   });
 });
 
@@ -339,7 +339,7 @@ function selectClip(clip, options = {}) {
   document.querySelector("#clipAudioState").textContent = clip.dataset.audioMuted === "true"
     ? "分类素材已静音 · 混剪仅使用配音与音乐"
     : "预览已静音 · 混剪会强制关闭素材原声";
-  const categoryMap = { outfit: "人物穿搭", overall: "整体展示", detail: "细节讲解", review: "测评对比", action: "动作展示", speech: "口播", other: "其他" };
+  const categoryMap = { outfit: "人物穿搭", overall: "整体展示", detail: "细节讲解", review: "测评对比", action: "动作展示", speech: "口播", upper_related: "上衣相关", other: "其他" };
   const type = clip.dataset.category.split(" ").find((name) => categoryMap[name]);
   document.querySelector("#categorySelect").value = categoryMap[type] || "其他";
   const isValid = Number(clip.dataset.duration) >= 2;
@@ -347,6 +347,22 @@ function selectClip(clip, options = {}) {
   state.textContent = isValid ? "✓ 符合规则" : "! 不能短于 2 秒";
   state.classList.toggle("invalid", !isValid);
 }
+window.clearClipEditorSelection = () => {
+  activeClip = null;
+  const video = document.querySelector("#inspectorVideo");
+  if (video) {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+    video.hidden = true;
+  }
+  const image = document.querySelector("#inspectorPreviewImage");
+  if (image) image.hidden = false;
+  document.querySelector("#clipInspectorTitle").textContent = "未选择片段";
+  document.querySelector("#clipNameInput").value = "";
+  document.querySelector("#clipTime").textContent = "等待选择素材";
+  document.querySelector("#durationValue").textContent = "0.00 秒";
+};
 document.querySelectorAll("[data-clip]").forEach((clip) => clip.addEventListener("click", () => selectClip(clip, { play: true })));
 
 document.querySelector("#selectIssuesButton").addEventListener("click", () => {
@@ -365,7 +381,7 @@ document.querySelector("#saveClipButton").addEventListener("click", () => {
     return;
   }
   const categoryValue = document.querySelector("#categorySelect").value;
-  const categoryType = { 人物穿搭: "outfit", 整体展示: "overall", 细节讲解: "detail", 测评对比: "review", 动作展示: "action", 口播: "speech", 其他: "other" }[categoryValue] || "other";
+  const categoryType = { 人物穿搭: "outfit", 整体展示: "overall", 细节讲解: "detail", 测评对比: "review", 动作展示: "action", 口播: "speech", 上衣相关: "upper_related", 其他: "other" }[categoryValue] || "other";
   const needsReview = activeClip.dataset.category.split(" ").includes("issue");
   activeClip.dataset.name = newName;
   activeClip.dataset.category = `${categoryType}${needsReview ? " issue" : ""}`;
@@ -438,18 +454,45 @@ document.querySelectorAll("dialog").forEach((dialog) => {
   });
 });
 
-document.querySelector("#openPreviewButton").addEventListener("click", () => {
+function syncPreviewPosition(sourceVideo, targetVideo) {
+  if (!sourceVideo || !targetVideo || !Number.isFinite(sourceVideo.currentTime)) return;
+  const currentTime = sourceVideo.currentTime;
+  const applyPosition = () => {
+    const lastFrame = Number.isFinite(targetVideo.duration) ? Math.max(0, targetVideo.duration - 0.05) : currentTime;
+    targetVideo.currentTime = Math.min(currentTime, lastFrame);
+  };
+  if (targetVideo.readyState >= 1) applyPosition();
+  else targetVideo.addEventListener("loadedmetadata", applyPosition, { once: true });
+}
+
+document.querySelector("#openPreviewButton").addEventListener("click", (event) => {
   const videoUrl = activeClip.dataset.videoUrl || "";
+  const inspectorVideo = document.querySelector("#inspectorVideo");
   const dialogVideo = document.querySelector("#dialogPreviewVideo");
   const dialogImage = document.querySelector("#dialogPreviewImage");
+  const dialog = document.querySelector("#previewDialog");
+  lastPreviewTrigger = event.currentTarget;
+  inspectorVideo.pause();
   setMutedPreview(dialogVideo, dialogImage, videoUrl, activeClip.dataset.sourceImage);
+  if (videoUrl) syncPreviewPosition(inspectorVideo, dialogVideo);
   document.querySelector("#dialogPreviewFallback").hidden = Boolean(videoUrl);
   document.querySelector("#dialogPreviewTitle").textContent = activeClip.dataset.name;
   document.querySelector("#dialogPreviewMeta").textContent = `${activeClip.dataset.time} · ${Number(activeClip.dataset.duration).toFixed(2)} 秒`;
-  document.querySelector("#previewDialog").showModal();
+  dialog.showModal();
+  dialog.querySelector("[data-close-dialog]").focus();
   if (videoUrl) dialogVideo.play().catch(() => {});
 });
-document.querySelector("#previewDialog").addEventListener("close", () => document.querySelector("#dialogPreviewVideo").pause());
+document.querySelector("#previewDialog").addEventListener("close", () => {
+  const dialogVideo = document.querySelector("#dialogPreviewVideo");
+  const inspectorVideo = document.querySelector("#inspectorVideo");
+  dialogVideo.pause();
+  if (!dialogVideo.hidden && !inspectorVideo.hidden) syncPreviewPosition(dialogVideo, inspectorVideo);
+  const previewTrigger = lastPreviewTrigger;
+  lastPreviewTrigger = null;
+  requestAnimationFrame(() => {
+    if (previewTrigger?.isConnected) previewTrigger.focus();
+  });
+});
 
 // Subtitle interactions
 const compareStage = document.querySelector("#compareStage");
@@ -465,6 +508,7 @@ compareButton.addEventListener("keydown", (event) => { if (event.code === "Space
 compareButton.addEventListener("keyup", () => showOriginal(false));
 
 const strategyCopy = {
+  block: ["保持完整构图并阻断", "检测到硬字幕时不裁切、不放大、不使用拉丝滤镜。"],
   repair: ["智能补全字幕覆盖区域", "适合字幕没有大面积遮挡服装主体的镜头。"],
   crop: ["裁掉底部字幕安全区", "画面会自动重新居中，适合人物主体位置较高的镜头。"],
   blur: ["柔化字幕区域", "速度最快，但会保留一条弱化区域，适合低优先级素材。"]
@@ -479,7 +523,6 @@ document.querySelectorAll("[data-strategy]").forEach((button) => {
     showToast(`已切换为${button.textContent}`);
   });
 });
-document.querySelector("#maskRange").addEventListener("input", (event) => document.querySelector("#maskRangeValue").textContent = `${event.target.value} px`);
 document.querySelector("#showMaskToggle").addEventListener("change", (event) => compareStage.classList.toggle("show-mask", event.target.checked));
 
 let subtitleIndex = 1;
@@ -494,11 +537,11 @@ document.querySelector("#previousSubtitleClip").addEventListener("click", () => 
 document.querySelector("#nextSubtitleClip").addEventListener("click", () => moveSubtitle(1));
 document.querySelector("#subtitlePlayButton").addEventListener("click", (event) => {
   event.currentTarget.textContent = event.currentTarget.textContent === "▶" ? "Ⅱ" : "▶";
-  showToast(event.currentTarget.textContent === "Ⅱ" ? "开始播放修复预览" : "预览已暂停");
+  showToast(event.currentTarget.textContent === "Ⅱ" ? "开始播放原画检查预览" : "预览已暂停");
 });
-document.querySelector("#applyAllSubtitlesButton").addEventListener("click", () => showToast("已将当前策略应用到 8 个同位置字幕片段"));
+document.querySelector("#applyAllSubtitlesButton").addEventListener("click", () => showToast("已保持原画并阻断 8 个同类硬字幕片段"));
 document.querySelector("#finishSubtitleButton").addEventListener("click", () => {
-  showToast("14 个片段的字幕处理已确认");
+  showToast("硬字幕与原画清晰度检查结果已保存");
   navigate("editing");
 });
 
@@ -577,7 +620,8 @@ const appState = {
   ],
   editingScriptId: "s1",
   activeManagedScriptId: "s1",
-  selectedAiVoice: "自然女声",
+  selectedAiVoice: "真人短种草",
+  voicePreviewApproved: false,
   outputCount: 3,
   productionStep: 1,
   outputs: [],
@@ -664,12 +708,12 @@ window.renderTaskBoard = renderTaskBoard;
 
 function currentScriptSnapshot(script) {
   if (!script) return [];
-  const categoryTypes = { "人物穿搭": "outfit", "整体展示": "overall", "细节讲解": "detail", "测评讲解": "review", "测评对比": "review", "动作展示": "action", "口播": "speech", "其他": "other" };
+  const categoryTypes = { "人物穿搭": "outfit", "整体展示": "overall", "细节讲解": "detail", "测评讲解": "review", "测评对比": "review", "动作展示": "action", "口播": "speech", "上衣相关": "upper_related", "其他": "other" };
   return (script.blocks || []).map((block, index) => ({
     id: String(block.id || `block-${index + 1}`),
     name: String(block.name || `段落 ${index + 1}`).slice(0, 100),
     duration: Number(Math.max(0.5, Number(block.duration || 2)).toFixed(3)),
-    type: ["outfit", "overall", "detail", "review", "action", "speech", "other"].includes(String(block.type || "").toLowerCase()) ? String(block.type).toLowerCase() : categoryTypes[String(block.category || "").trim()] || "other",
+    type: ["outfit", "overall", "detail", "review", "action", "speech", "upper_related", "other"].includes(String(block.type || "").toLowerCase()) ? String(block.type).toLowerCase() : categoryTypes[String(block.category || "").trim()] || "other",
     visualInstruction: String(block.visualInstruction || block.name || "匹配画面内容").slice(0, 500),
     subtitleText: String(block.subtitleText ?? block.text ?? "").slice(0, 1000),
     voiceText: String(block.voiceText ?? block.text ?? "").slice(0, 1000),
@@ -689,17 +733,113 @@ function isEditingPlanStale(plan = appState.editingPlan) {
   return false;
 }
 
+const EDITING_ISSUE_GUIDANCE = Object.freeze({
+  system_recheck: {
+    label: "软件需重新校验",
+    guidance: "点击“重新安排”，用优化后的最终选镜重新检查；无需先上传素材。"
+  },
+  script_adjustment: {
+    label: "脚本需要调整",
+    guidance: "调整该段的目标分类、口播或叙事顺序，然后再重新安排。"
+  },
+  material_gap: {
+    label: "确实缺少素材",
+    guidance: "补充问题中指定的素材分类或时长；如果口播不必须表达该内容，也可调整脚本。"
+  },
+  evidence_gap: {
+    label: "画面证据不足",
+    guidance: "改用已有对应动作或直接观察记录的镜头；确实没有画面证据时，删除无法证明的口播卖点。"
+  }
+});
+
+function editingIssueCategory(issue = {}) {
+  const explicit = String(issue.resolutionType || issue.issueType || issue.category || "").trim();
+  if (Object.prototype.hasOwnProperty.call(EDITING_ISSUE_GUIDANCE, explicit)) return explicit;
+  const code = String(issue.code || "").toUpperCase();
+  if (/RECHECK|REVALIDAT|STALE|POST_OPTIM|SYSTEM/.test(code)) return "system_recheck";
+  if (/MATERIAL_ROLE_MISMATCH|NARRATIVE|TOPIC|CONCLUSION|SCRIPT|VOICE|TEXT|ROLE/.test(code)) return "script_adjustment";
+  if (/MATERIAL_BINDING|MATERIAL_MISSING|NO_MATERIAL|UNIQUE_MATERIAL|BLOCK_DURATION|SHOT_TOO|MATERIAL_NOT_ELIGIBLE|TIMELINE_EMPTY/.test(code)) return "material_gap";
+  return "evidence_gap";
+}
+
+function collectEditingPlanIssues({ plan, decisions, continuity, stale }) {
+  const issues = [];
+  const addIssue = (issue = {}, fallbackCategory = "") => {
+    const message = String(issue.message || issue.detail || issue.reason || "").trim();
+    if (!message) return;
+    issues.push({
+      ...issue,
+      category: fallbackCategory || editingIssueCategory(issue),
+      message,
+      suggestion: String(issue.suggestion || issue.recommendation || "").trim()
+    });
+  };
+
+  if (stale) addIssue({ code: "PLAN_INPUT_STALE", message: "素材或脚本已变化，当前检查结果不再对应最新输入。" }, "system_recheck");
+  [
+    ...(continuity?.issues || []),
+    ...(plan?.issues || []),
+    ...(plan?.validationIssues || []),
+    ...(plan?.revalidation?.issues || []),
+    ...(plan?.timelineOptimization?.errors || [])
+  ].forEach((issue) => addIssue(issue));
+
+  (decisions || []).forEach((decision, index) => {
+    const blockName = String(decision.blockName || `段落 ${index + 1}`);
+    if (!(decision.timeline || []).length) {
+      addIssue({ code: "TIMELINE_EMPTY", blockId: decision.blockId, message: `${blockName} 没有可执行镜头。` }, "material_gap");
+    }
+    const unsupportedClaims = [...new Set(decision.unsupportedClaims || [])];
+    unsupportedClaims.forEach((claim) => addIssue({
+      code: "DIRECT_EVIDENCE_REQUIRED",
+      blockId: decision.blockId,
+      message: `${blockName} 缺少“${String(claim)}”的直接画面证据。`
+    }, "evidence_gap"));
+    if (decision.rewriteRequired === true && !unsupportedClaims.length) {
+      addIssue({ code: "SCRIPT_REWRITE_REQUIRED", blockId: decision.blockId, message: `${blockName} 的口播无法由当前画面完整证明。` }, "evidence_gap");
+    }
+  });
+
+  if (plan?.status === "blocked" && !issues.length) {
+    addIssue({ code: "SYSTEM_RECHECK_REQUIRED", message: "计划被阻断，但没有返回可定位的素材或脚本原因。" }, "system_recheck");
+  }
+
+  const seen = new Set();
+  return issues.filter((issue) => {
+    const key = `${issue.category}|${issue.blockId || ""}|${issue.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function editingIssuePanel(issues = []) {
+  if (!issues.length) return "";
+  const order = ["system_recheck", "script_adjustment", "material_gap", "evidence_gap"];
+  const groups = order.map((category) => ({ category, items: issues.filter((issue) => issue.category === category) })).filter((group) => group.items.length);
+  return `<section class="ai-editor-issue-panel" role="status" aria-live="polite" aria-label="剪辑计划问题分类">
+    <header><strong>问题已按原因分开</strong><small>先修复软件校验和脚本问题，只有“确实缺少素材”才需要补拍或上传。</small></header>
+    <div class="ai-editor-issue-groups">${groups.map(({ category, items }) => {
+      const presentation = EDITING_ISSUE_GUIDANCE[category];
+      return `<section class="ai-editor-issue-group is-${category}"><div class="ai-editor-issue-title"><strong>${escapeHtml(presentation.label)}</strong><span>${items.length} 项</span></div><ul>${items.map((item) => `<li><span>${escapeHtml(item.message)}</span>${item.suggestion ? `<small>建议：${escapeHtml(item.suggestion)}</small>` : ""}</li>`).join("")}</ul><p><strong>怎么处理：</strong>${escapeHtml(presentation.guidance)}</p></section>`;
+    }).join("")}</div>
+  </section>`;
+}
+
 function renderAiEditorPlan() {
   const planner = document.querySelector(".ai-editor-planner");
   const preview = document.querySelector("#aiEditorPlanPreview");
   const status = document.querySelector("#aiEditorPlanStatus");
   const confirm = document.querySelector("#confirmAiEditorPlan");
   const replan = document.querySelector("#replanWithAiEditor");
+  const reject = document.querySelector("#rejectAiEditorPlan");
   const planButton = document.querySelector("#planWithAiEditor");
   const hint = document.querySelector("#aiEditorPlanHint");
   const startButton = document.querySelector("#startConnectedMix");
   const readinessPlan = document.querySelector("#readinessPlan");
-  if (!planner || !preview || !status || !confirm || !replan || !planButton || !hint || !startButton) return;
+  const catalogSummary = document.querySelector("#aiEditorCatalogSummary");
+  const learningSummary = document.querySelector("#aiEditorLearningSummary");
+  if (!planner || !preview || !status || !confirm || !replan || !reject || !planButton || !hint || !startButton) return;
   const script = appState.scripts.find((item) => item.id === appState.editingScriptId);
   const hasInputs = Boolean(script && appState.editingMaterialIds.length);
   const plan = appState.editingPlan;
@@ -708,11 +848,20 @@ function renderAiEditorPlan() {
   planner.classList.remove("is-ready", "is-review", "is-blocked", "is-stale");
   planButton.disabled = !hasInputs;
   replan.hidden = !plan;
+  reject.hidden = !plan || plan.confirmed === true;
 
   if (!plan) {
+    const selectedMaterials = appState.editingMaterialIds.map((id) => appState.materials.find((item) => item.id === id)).filter(Boolean);
+    const localCounts = selectedMaterials.reduce((counts, material) => {
+      const key = material.typeLabel || "其他";
+      counts[key] = (counts[key] || 0) + 1;
+      return counts;
+    }, {});
+    if (catalogSummary) catalogSummary.innerHTML = `<small>素材分类清单</small><strong>${selectedMaterials.length ? `已勾选 ${selectedMaterials.length} 个素材` : "等待读取当前款号"}</strong><p>人工确认结果完整读取 · 不二次筛选</p>${Object.keys(localCounts).length ? `<div class="ai-editor-context-tags">${Object.entries(localCounts).map(([name, count]) => `<span>${escapeHtml(name)} ${count}</span>`).join("")}</div>` : ""}`;
+    if (learningSummary) learningSummary.innerHTML = "<small>用户投喂案例</small><strong>生成方案时自动检索</strong><p>只学习结构、切法和节奏，不复用参考商品事实</p>";
     status.className = "status-pill";
     status.textContent = "等待安排";
-    preview.innerHTML = `<div class="ai-editor-empty"><strong>${hasInputs ? "还没有剪辑方案" : "请先选择素材和脚本"}</strong><small>${hasInputs ? "点击“让 AI 剪辑师安排”，本地 Qwen 会逐段选镜。" : "AI 只会读取本次勾选的素材能力卡。"}</small></div>`;
+    preview.innerHTML = `<div class="ai-editor-empty"><strong>${hasInputs ? "还没有剪辑方案" : "请先选择素材和脚本"}</strong><small>${hasInputs ? "点击“让 AI 剪辑师安排”，系统会逐句理解脚本并从对应分类选镜。" : "先从人工确认的素材分类清单勾选本次素材。"}</small></div>`;
     confirm.disabled = true;
     confirm.textContent = "确认采用这份安排";
     hint.textContent = "生成前必须查看并确认剪辑决策单。";
@@ -721,20 +870,24 @@ function renderAiEditorPlan() {
     return;
   }
 
-  const statusLabels = { ready: "可确认", review: "需要复核", blocked: "存在阻断" };
+  const statusLabels = { ready: "可确认", review: "可生成候选", blocked: "有风险，仍可生成" };
   const evidenceLabels = { direct: "直接证据", indirect: "间接匹配", missing: "证据缺失" };
+  const roleLabels = { question_hook: "问题钩子", pain_hook: "痛点钩子", detail_evidence: "细节证据", outfit_result: "上身结果", overall_result: "整体结果", use_case: "穿着场景", review_conclusion: "测评结论", soft_cta: "轻引导", support: "承接" };
+  const typeLabels = { outfit: "人物穿搭", overall: "整体展示", detail: "细节讲解", review: "测评对比", action: "动作展示", speech: "口播", upper_related: "上衣相关", other: "其他" };
   if (stale) {
     planner.classList.add("is-stale");
     status.className = "status-pill danger";
     status.textContent = "输入已变化";
   } else {
-    planner.classList.add(`is-${plan.status}`);
-    status.className = `status-pill ${plan.status === "ready" ? "success" : plan.status === "blocked" ? "danger" : "processing"}`;
-    status.textContent = plan.confirmed ? "已确认" : statusLabels[plan.status] || "需要复核";
+    planner.classList.add(plan.status === "ready" ? "is-ready" : "is-review");
+    status.className = `status-pill ${plan.status === "ready" ? "success" : "processing"}`;
+    status.textContent = plan.confirmed ? "已确认" : plan.rejected ? "已拒绝" : statusLabels[plan.status] || "需要复核";
   }
   const materialMap = new Map(appState.materials.map((material) => [String(material.id), material]));
   const decisions = Array.isArray(plan.decisions) ? plan.decisions : [];
+  const intentMap = new Map((Array.isArray(plan.sentenceIntents) ? plan.sentenceIntents : []).map((intent) => [String(intent.blockId), intent]));
   const decisionHtml = decisions.map((decision, index) => {
+    const sentenceIntent = intentMap.get(String(decision.blockId)) || {};
     const materialNames = (decision.selectedMaterialIds || []).map((id) => materialMap.get(String(id))?.name || id);
     const timelineSeconds = (decision.timeline || []).reduce((total, item) => total + Number(item.duration || 0), 0);
     const warnings = (decision.unsupportedClaims || []).map((claim) => `<span>${escapeHtml(claim)}</span>`).join("");
@@ -743,18 +896,29 @@ function renderAiEditorPlan() {
       : "";
     return `<article class="ai-editor-decision is-${escapeHtml(decision.evidenceStatus || "indirect")}">
       <div class="ai-editor-decision-index"><span>段落 ${index + 1}</span><small>${Number(timelineSeconds).toFixed(1)} 秒</small></div>
-      <div class="ai-editor-decision-copy"><strong>${escapeHtml(decision.blockName || decision.blockId)}</strong><small>${escapeHtml(evidenceLabels[decision.evidenceStatus] || "需要复核")} · ${escapeHtml(decision.reason || "等待选镜理由")}</small>
+      <div class="ai-editor-decision-copy"><strong>${escapeHtml(decision.blockName || sentenceIntent.name || decision.blockId)}</strong><div class="ai-editor-decision-meta"><span>${escapeHtml(roleLabels[decision.narrativeRole || sentenceIntent.narrativeRole] || "脚本承接")}</span><span>目标分类：${escapeHtml((sentenceIntent.requiredMaterialTypes || []).map((type) => typeLabels[type] || type).join(" / ") || "按文案判断")}</span><span>${escapeHtml(evidenceLabels[decision.evidenceStatus] || "需要复核")}</span></div><small>选镜理由：${escapeHtml(decision.reason || "等待选镜理由")}</small>
       <div class="ai-editor-materials">${materialNames.length ? materialNames.map((name) => `<span>${escapeHtml(name)}</span>`).join("") : "<span>没有可执行素材</span>"}</div>
       ${warnings ? `<div class="ai-editor-warnings">${warnings}</div>` : ""}${rewrite}</div>
     </article>`;
   }).join("");
-  preview.innerHTML = `<div class="ai-editor-empty"><strong>${escapeHtml(plan.summary || "AI 剪辑师已完成安排")}</strong><small>${decisions.length} 个脚本段落 · ${escapeHtml(plan.model || "qwen3.5:latest")} · 只使用本次勾选素材</small></div>${decisionHtml || '<div class="ai-editor-empty"><strong>计划没有可执行段落</strong><small>请重新安排。</small></div>'}`;
-  const canConfirm = !stale && plan.status !== "blocked" && decisions.length > 0;
+  const providerLabel = plan.provider === "qwen" ? "云端千问" : "本地 Qwen";
+  const routeNote = plan.reviewerUsed ? " · 疑难复核" : plan.fallbackUsed ? " · 云端失败后本地接手" : "";
+  const continuity = plan.narrativeContinuity || { status: plan.status === "blocked" ? "blocked" : "pass", issues: [] };
+  const continuityIssueCount = (continuity.issues || []).filter((item) => item?.message).length;
+  const continuityHtml = `<section class="ai-editor-continuity ${continuity.status === "blocked" ? "is-blocked" : ""}"><span>${continuity.status === "blocked" ? "待改" : "通过"}</span><div><strong>叙事逻辑检查${continuity.status === "blocked" ? `发现 ${continuityIssueCount} 项建议` : "已通过"}</strong><small>${continuity.status === "blocked" ? "可以先生成候选成片，再按下方建议修改。" : "脚本主题、段落顺序、素材分类和逐句绑定保持连续。"}</small></div></section>`;
+  const categorizedIssues = collectEditingPlanIssues({ plan, decisions, continuity, stale });
+  preview.innerHTML = `${continuityHtml}${editingIssuePanel(categorizedIssues)}<div class="ai-editor-empty"><strong>${escapeHtml(plan.summary || "剪辑智能体已完成安排")}</strong><small>${decisions.length} 个脚本段落 · ${escapeHtml(providerLabel)} / ${escapeHtml(plan.model || "qwen3.5:latest")}${escapeHtml(routeNote)} · 只使用本次人工勾选素材</small></div>${decisionHtml || '<div class="ai-editor-empty"><strong>计划没有可执行段落</strong><small>请重新安排。</small></div>'}`;
+  const catalog = plan.catalogSummary || {};
+  if (catalogSummary) catalogSummary.innerHTML = `<small>人工确认的素材分类清单</small><strong>${escapeHtml(catalog.sku || "当前款号")} · 共 ${Number(catalog.materialCount || appState.editingMaterialIds.length)} 个，本次勾选 ${Number(catalog.selectedMaterialCount || appState.editingMaterialIds.length)} 个</strong><p>完整读取 · 二次质量筛选 0 项 · 不改类、不删除</p><div class="ai-editor-context-tags">${Object.entries(catalog.categoryCounts || {}).map(([name, count]) => `<span>${escapeHtml(name)} ${Number(count)}</span>`).join("") || "<span>等待分类统计</span>"}</div>`;
+  const matches = plan.retrieval?.matches || [];
+  if (learningSummary) learningSummary.innerHTML = `<small>检索到的用户投喂案例</small><strong>${matches.length} 个可追溯案例</strong><p>${matches.length ? "本次只借鉴钩子结构、镜头角色、切法和节奏" : "没有匹配案例，按当前脚本和分类清单安全规划"}</p>${matches.length ? `<div class="ai-editor-context-tags">${matches.map((item) => `<span>${escapeHtml(item.caseId)}</span>`).join("")}</div>` : ""}`;
+  const canConfirm = !stale && plan.rejected !== true && decisions.length > 0;
   confirm.disabled = !canConfirm || plan.confirmed === true;
-  confirm.textContent = plan.confirmed ? "已确认采用" : "确认采用这份安排";
-  hint.textContent = stale ? "素材或脚本已变化，必须重新安排。" : plan.status === "blocked" ? "计划存在阻断项，请补充素材后重新安排。" : plan.status === "review" ? "包含证据缺口或改词建议，请逐段检查后确认。" : "镜头与素材证据匹配，可以确认后生成。";
+  confirm.textContent = plan.confirmed ? "已确认采用" : plan.status === "ready" ? "确认采用这份安排" : "确认并先生成候选";
+  const issueLabels = [...new Set(categorizedIssues.map((issue) => EDITING_ISSUE_GUIDANCE[issue.category]?.label).filter(Boolean))];
+  hint.textContent = stale ? "素材或脚本已变化，请先重新安排。" : plan.rejected ? "这份安排已记录为拒绝反馈，请重新安排。" : !canConfirm ? "当前计划没有剪辑段落，请重新安排。" : plan.status === "blocked" || plan.status === "review" ? `已记录：${issueLabels.join("、") || "生成后待复核"}。可以先生成候选，再按报告修改；评分只影响可投放状态。` : "已有剪辑段落，确认后先生成候选成片并逐条检查。";
   startButton.disabled = !(plan.confirmed === true && canConfirm);
-  if (readinessPlan) readinessPlan.textContent = stale ? "输入已变化，需重新安排" : plan.confirmed ? `${decisions.length} 个段落已确认` : plan.status === "blocked" ? "计划被阻断" : "等待人工确认";
+  if (readinessPlan) readinessPlan.textContent = stale ? "输入已变化，需重新安排" : plan.confirmed ? `${decisions.length} 个段落已确认${plan.status === "ready" ? "" : " · 生成后待修改"}` : canConfirm ? "可确认并生成候选" : "缺少可执行时间线";
 }
 
 window.caikuRenderAiEditorPlan = renderAiEditorPlan;
@@ -776,16 +940,20 @@ function renderSkuFolders() {
   const tree = document.querySelector(".folder-tree");
   const skuGroups = [...appState.materials.reduce((groups, material) => {
     const sku = material.sku || "未分款";
-    const entry = groups.get(sku) || { sku, batchNames: new Set(), count: 0 };
+    const entry = groups.get(sku) || { sku, categories: new Map(), count: 0 };
     entry.count += 1;
-    if (material.batch) entry.batchNames.add(material.batch);
+    const category = material.typeLabel || "其他";
+    entry.categories.set(category, (entry.categories.get(category) || 0) + 1);
     groups.set(sku, entry);
     return groups;
   }, new Map()).values()].sort((a, b) => a.sku.localeCompare(b.sku, "zh-CN"));
   const validFolders = new Set(["all", "unusable", ...skuGroups.map((item) => item.sku)]);
   if (!validFolders.has(libraryFolder)) libraryFolder = "all";
-  tree.innerHTML = `${skuGroups.map((group) => `<button class="${libraryFolder === group.sku ? "is-active" : ""}" data-folder="${escapeHtml(group.sku)}"><span>▣</span><span><strong>${escapeHtml(group.sku)}</strong><small>${escapeHtml([...group.batchNames].slice(0, 2).join("、") || "素材盘款号")}</small></span><b>${group.count}</b></button>`).join("")}
-    <button class="${libraryFolder === "all" ? "is-active" : ""}" data-folder="all"><span>◫</span><span><strong>全部款号</strong><small>跨批次查看</small></span><b>${appState.materials.length}</b></button>
+  tree.innerHTML = `${skuGroups.map((group) => {
+    const summary = [...group.categories.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([label, count]) => `${label} ${count}`).join(" · ") || "按内容分类";
+    return `<button class="${libraryFolder === group.sku ? "is-active" : ""}" data-folder="${escapeHtml(group.sku)}"><span>▣</span><span><strong>${escapeHtml(group.sku)}</strong><small>${escapeHtml(summary)}</small></span><b>${group.count}</b></button>`;
+  }).join("")}
+    <button class="${libraryFolder === "all" ? "is-active" : ""}" data-folder="all"><span>◫</span><span><strong>全部款号</strong><small>跨款号查看</small></span><b>${appState.materials.length}</b></button>
     <button class="${libraryFolder === "unusable" ? "is-active" : ""}" data-folder="unusable"><span>!</span><span><strong>不可用</strong><small>不会参与混剪</small></span><b>0</b></button>`;
   tree.querySelectorAll("[data-folder]").forEach((button) => button.addEventListener("click", () => {
     libraryFolder = button.dataset.folder;
@@ -810,9 +978,18 @@ function getVisibleMaterials() {
 }
 
 function materialAiLabel(material) {
-  if (material.classificationMode === "qwen_vision") return `Qwen ${Math.round(Number(material.classificationConfidence || 0) * 100)}%`;
+  if (material.classificationMode === "qwen_vision") return `云端 Qwen ${Math.round(Number(material.classificationConfidence || 0) * 100)}%`;
+  if (material.classificationMode === "ollama_vision") return `本地 Qwen ${Math.round(Number(material.classificationConfidence || 0) * 100)}%${material.classificationFallbackUsed ? " · 回退" : ""}`;
   if (material.classificationMode === "offline_fallback") return "离线兜底 · 待复核";
   return "历史批次 · 待重分析";
+}
+
+function materialCaptionLabel(material) {
+  if (material.lowReuse === true) return `低复用待复核 · ${(material.lowReuseReasons || []).join("；") || "复杂图文或字幕风险"}`;
+  if (material.captionStatus === "residual_blocked") return "硬字幕残留 · 不可混剪";
+  if (material.eligibleForMix === false && material.productIdentity?.status !== "matched") return `商品身份${material.productIdentity?.status || "unknown"} · 不可混剪`;
+  if (material.captionStatus === "treated_needs_review" || material.classificationNeedsReview) return "字幕区待复核";
+  return "字幕检查通过";
 }
 
 function renderLibrary() {
@@ -824,10 +1001,10 @@ function renderLibrary() {
     <article class="material-row ${selectedMaterialIds.has(material.id) ? "is-selected" : ""}" data-material-row="${material.id}">
       <input type="checkbox" data-select-material="${material.id}" aria-label="选择${escapeHtml(material.name)}" ${selectedMaterialIds.has(material.id) ? "checked" : ""}>
       <span class="material-thumb"><img src="${material.image}" alt=""></span>
-      <span class="material-name"><strong>${escapeHtml(material.name)}</strong><small>${escapeHtml(material.batch)} · ${material.captionStatus === "treated_needs_review" ? "字幕区待复核" : "已完成字幕处理"} · ${escapeHtml(materialAiLabel(material))}</small></span>
+      <span class="material-name"><strong>${escapeHtml(material.name)}</strong><small>${escapeHtml(material.typeLabel)} · ${escapeHtml(materialCaptionLabel(material))} · ${escapeHtml(materialAiLabel(material))}</small></span>
       <span class="material-meta"><i class="material-type ${material.type}">${escapeHtml(material.typeLabel)}</i><small>${escapeHtml(material.sku)}</small></span>
       <span class="material-duration">${material.duration.toFixed(2)}s</span>
-      <span class="material-use">${material.uses ? `${material.uses} 个工程` : "未使用"}</span>
+      <span class="material-use">${material.uses ? `${material.uses} 个工程` : "人工分类清单"}</span>
       <span class="material-actions"><button data-preview-material="${material.id}">预览</button><button class="delete-material" data-delete-material="${material.id}" aria-label="删除${escapeHtml(material.name)}">删除</button></span>
     </article>`).join("");
   document.querySelector("#libraryEmpty").hidden = visible.length > 0;
@@ -855,8 +1032,13 @@ function requestMaterialDelete(id, afterDelete) {
   const material = appState.materials.find((item) => item.id === id);
   if (!material) return;
   const inEditing = appState.editingMaterialIds.includes(id);
-  askConfirm(`删除素材“${material.name}”？`, inEditing ? "它正在未导出的成片工程中使用。删除后会同步从时间线移除，原视频仍保留。" : "素材文件会移入软件回收区，原视频仍保留。", () => {
-    if (window.caiku?.trashMaterial) window.caiku.trashMaterial(material).catch((error) => showToast(error.message || "素材文件删除失败", true));
+  askConfirm(`删除素材“${material.name}”？`, inEditing ? "它正在未导出的成片工程中使用。删除后会同步从时间线移除，原视频仍保留。" : "素材文件会移入软件回收区，原视频仍保留。", async () => {
+    try {
+      if (window.caiku?.trashMaterial && material.manifestPath) await window.caiku.trashMaterial(material);
+    } catch (error) {
+      showToast(error.message || "素材文件删除失败", true);
+      return;
+    }
     appState.materials = appState.materials.filter((item) => item.id !== id);
     appState.editingMaterialIds = appState.editingMaterialIds.filter((materialId) => materialId !== id);
     selectedMaterialIds.delete(id);
@@ -932,15 +1114,22 @@ document.querySelector("#deleteSelectedMaterials").addEventListener("click", () 
   const count = selectedMaterialIds.size;
   askConfirm(`删除所选 ${count} 个素材？`, "素材文件与缩略图会移入系统回收站；正在使用的引用也会从本次混剪移除，原视频仍保留。", async () => {
     const removed = appState.materials.filter((item) => selectedMaterialIds.has(item.id));
-    if (window.caiku?.trashMaterial) {
-      for (const item of removed) await window.caiku.trashMaterial(item).catch(() => false);
+    const deletedIds = new Set();
+    let failedCount = 0;
+    for (const item of removed) {
+      try {
+        if (window.caiku?.trashMaterial && item.manifestPath) await window.caiku.trashMaterial(item);
+        deletedIds.add(item.id);
+      } catch {
+        failedCount += 1;
+      }
     }
-    appState.materials = appState.materials.filter((item) => !selectedMaterialIds.has(item.id));
-    appState.editingMaterialIds = appState.editingMaterialIds.filter((id) => !selectedMaterialIds.has(id));
-    selectedMaterialIds.clear();
+    appState.materials = appState.materials.filter((item) => !deletedIds.has(item.id));
+    appState.editingMaterialIds = appState.editingMaterialIds.filter((id) => !deletedIds.has(id));
+    deletedIds.forEach((id) => selectedMaterialIds.delete(id));
     renderLibrary();
     renderEditing();
-    showToast(`已将 ${count} 个素材移入系统回收站`);
+    showToast(failedCount ? `已删除 ${deletedIds.size} 个，${failedCount} 个因安全检查未删除` : `已将 ${deletedIds.size} 个素材移入系统回收站`, failedCount > 0);
   });
 });
 document.querySelector("#addSelectedToEditing").addEventListener("click", () => {
@@ -955,7 +1144,7 @@ document.querySelector("#openSelectionBasket").addEventListener("click", () => {
 });
 document.querySelector("#loadSkuMaterials").addEventListener("click", () => {
   const sku = document.querySelector("#mixSkuSelect").value;
-  const matches = appState.materials.filter((item) => sku === "all" || item.sku === sku).filter((item) => Number(item.duration) >= 2);
+  const matches = appState.materials.filter((item) => sku === "all" || item.sku === sku);
   matches.forEach((item) => { if (!appState.editingMaterialIds.includes(item.id)) appState.editingMaterialIds.push(item.id); });
   renderEditing();
   showToast(`已从素材盘加载 ${matches.length} 个${sku === "all" ? "" : ` ${sku}`}素材`);
@@ -996,9 +1185,13 @@ function renderEditing() {
   document.querySelector("#readinessMaterial").textContent = timelineMaterials.length ? `${timelineMaterials.length} 个片段，均 ≥ 2 秒` : "请添加画面素材";
   const hasVoice = Boolean(appState.selectedAiVoice || appState.voices.length);
   const needsVoice = Boolean(script && script.voiceMode !== "music_only" && script.blocks.some((block) => block.voiceEnabled !== false));
-  const voiceReady = !needsVoice || hasVoice;
+  const aiVoiceApproved = Boolean(appState.selectedAiVoice && appState.voicePreviewApproved);
+  const voiceReady = !needsVoice || appState.voices.length > 0 || aiVoiceApproved;
+  const musicOnly = script?.voiceMode === "music_only";
+  const hasMusicFile = appState.music.some((item) => Boolean(item?.filePath));
+  const audioReady = voiceReady && (!musicOnly || hasMusicFile);
   const voiceLabel = appState.voices.length ? `自定义配音 · ${appState.voices.length} 个文件` : appState.selectedAiVoice;
-  document.querySelector("#readinessAudio").textContent = voiceReady && appState.music.length ? `${needsVoice ? voiceLabel : "纯音乐无口播"} · 音乐已添加` : needsVoice && !hasVoice ? "当前脚本需要口播，请选择声音" : "请至少添加一首音乐";
+  document.querySelector("#readinessAudio").textContent = !voiceReady ? appState.selectedAiVoice ? "请先点击试听并确认自然度" : "当前脚本需要口播，请选择声音" : musicOnly && !hasMusicFile ? "纯音乐脚本请添加音乐文件" : hasMusicFile ? `${needsVoice ? voiceLabel : "纯音乐无口播"} · 音乐已添加` : `${voiceLabel || "自然配音"} · 背景音乐可选`;
   const modeStatus = document.querySelector("#mixVoiceModeStatus");
   if (modeStatus) {
     const modeLabels = { full_voice: "全程口播", partial_voice: "部分段落口播", music_only: "纯音乐无口播" };
@@ -1014,11 +1207,11 @@ function renderEditing() {
   readiness[0].querySelector(":scope > span").textContent = script ? "✓" : "!";
   readiness[1].classList.toggle("is-missing", !timelineMaterials.length);
   readiness[1].querySelector(":scope > span").textContent = timelineMaterials.length ? "✓" : "!";
-  readiness[2].classList.toggle("is-missing", !voiceReady || !appState.music.length);
-  readiness[2].querySelector(":scope > span").textContent = voiceReady && appState.music.length ? "✓" : "!";
+  readiness[2].classList.toggle("is-missing", !audioReady);
+  readiness[2].querySelector(":scope > span").textContent = audioReady ? "✓" : "!";
   readiness[3].classList.toggle("is-missing", appState.outputCount < 1);
   readiness[3].querySelector(":scope > span").textContent = appState.outputCount >= 1 ? "✓" : "!";
-  const planReady = Boolean(appState.editingPlan?.confirmed && !isEditingPlanStale() && appState.editingPlan.status !== "blocked");
+  const planReady = Boolean(appState.editingPlan?.confirmed && !isEditingPlanStale());
   readiness[4].classList.toggle("is-missing", !planReady);
   readiness[4].querySelector(":scope > span").textContent = planReady ? "✓" : "!";
   readiness[5].classList.remove("is-missing");
@@ -1065,40 +1258,52 @@ function renderProductionStep() {
 function createQualityOutput(index) {
   const number = String(index + 1).padStart(2, "0");
   const variants = [
-    { status: "pass", score: 96, issue: "四项检查通过，可以导出。" },
-    { status: "risk", score: 72, issue: "口播出现疑似极限表达“全网最低价”，需要替换后复核。" },
-    { status: "risk", score: 79, issue: "文案描述“灰色裤装”，当前镜头识别为黑色，画文不一致。" }
+    { status: "ready_100", score: 100, issue: "十二项发布门槛全部通过，可以进入可投放目录。" },
+    { status: "blocked", score: 72, issue: "候选成片已生成；口播出现疑似极限表达“全网最低价”，修改前不可投放。" },
+    { status: "repair_required", score: 79, issue: "文案描述“灰色裤装”，当前镜头识别为黑色，需要修复。" }
   ];
   const variant = variants[index % variants.length];
+  const allPassed = variant.status === "ready_100";
+  const wrongProduct = index % variants.length === 2;
+  const complianceRisk = index % variants.length === 1;
   const checks = [
-    { name: "画面与文案一致", passed: index % variants.length !== 2, detail: index % variants.length === 2 ? "颜色描述与画面识别结果不一致" : "商品、颜色、动作和卖点匹配" },
-    { name: "口播模式与音轨", passed: true, detail: "已检查脚本声音模式与输出音轨；逐字核对需接入语音转写" },
-    { name: "极限词与违禁词", passed: index % variants.length !== 1, detail: index % variants.length === 1 ? "发现疑似极限表达，需要人工确认" : "未发现需拦截的风险表达" },
-    { name: "抖音投放适配", passed: variant.status === "pass", detail: variant.status === "pass" ? "满足当前发布前检查规则" : "修复风险项后重新检查" }
-  ];
+    { name: "技术与导出 · 10分", passed: true, detail: "1080×1920 · H.264 · AAC 48 kHz" },
+    { name: "商品身份一致 · 15分", passed: !wrongProduct, detail: wrongProduct ? "颜色描述与目标商品画面不一致" : "款号、颜色和版型均与商品资料卡一致" },
+    { name: "脚本与直接证据 · 15分", passed: !wrongProduct, detail: wrongProduct ? "当前镜头不能直接证明脚本描述" : "每段文案都已绑定直接画面证据" },
+    { name: "前 3 秒钩子 · 10分", passed: true, detail: "开头使用已验证的上身结果镜头" },
+    { name: "节奏与镜头语法 · 10分", passed: true, detail: "单镜 2–4 秒，成片内没有重复素材" },
+    { name: "商品证明完整度 · 10分", passed: !wrongProduct, detail: wrongProduct ? "需补充目标款号证明镜头" : "整体、细节和动作证明完整" },
+    { name: "字幕与画面洁净度 · 8分", passed: true, detail: "原字幕无残留，脚本字幕已烧录并复核" },
+    { name: "声音质量 · 7分", passed: true, detail: "素材原声已静音，响度和峰值符合门槛" },
+    { name: "合规与真实性 · 10分", passed: !complianceRisk, detail: complianceRisk ? "发现疑似极限表达“全网最低价”" : "口播、字幕和可见文字未发现阻断风险" },
+    { name: "成片差异化 · 5分", passed: true, detail: "开头、镜头顺序、节奏和音频策略已检查" }
+  ].map((check) => allPassed ? { ...check, passed: true } : check);
   return {
     id: `output-${Date.now()}-${index}`,
-    name: `S2026-08_神裤测评_千川版${number}.mp4`,
+    name: `S2026-08_神裤测评_商品卡版${number}.mp4`,
     status: variant.status,
     score: variant.score,
     issue: variant.issue,
     duration: "00:45",
     image: index % 2 ? "assets/video2-front.jpg" : "assets/video1-look.jpg",
-    checks
+    checks,
+    repairActions: allPassed ? [] : wrongProduct
+      ? [{ type: "replace_material", label: "替换错误商品镜头并重新生成" }]
+      : [{ type: "rewrite_compliance", label: "删除极限词后重新生成" }]
   };
 }
 
 function renderBatchOutputs() {
   const list = document.querySelector("#batchOutputList");
-  const passed = appState.outputs.filter((item) => item.status === "pass").length;
-  const risk = appState.outputs.filter((item) => item.status === "risk").length;
+  const passed = appState.outputs.filter((item) => item.status === "ready_100").length;
+  const risk = appState.outputs.filter((item) => item.status !== "ready_100").length;
   const repairButton = document.querySelector("#repairAllOutputs");
   const exportButton = document.querySelector("#exportPassedOutputs");
   repairButton.disabled = risk === 0;
-  exportButton.disabled = !appState.outputs.length || risk > 0;
+  exportButton.disabled = passed === 0;
   repairButton.title = risk ? `修复 ${risk} 条风险成片` : "当前没有需要修复的风险项";
-  exportButton.title = !appState.outputs.length ? "生成并通过质检后才可导出" : risk ? `还有 ${risk} 条成片未通过质检` : "导出全部通过成片";
-  document.querySelector("#pendingOutputCount").textContent = "0";
+  exportButton.title = passed ? `打开 ${passed} 条通过投放前检查的成片` : "当前候选成片尚不可投放";
+  document.querySelector("#pendingOutputCount").textContent = appState.outputs.length;
   document.querySelector("#passedOutputCount").textContent = passed;
   document.querySelector("#riskOutputCount").textContent = risk;
   if (!appState.outputs.length) {
@@ -1109,8 +1314,8 @@ function renderBatchOutputs() {
   list.innerHTML = appState.outputs.map((output, index) => `
     <article class="batch-output-card is-${output.status}">
       <div class="batch-output-thumb"><img src="${output.image}" alt=""><span>${output.duration}</span></div>
-      <div class="batch-output-copy"><span class="status-pill ${output.status === "pass" ? "success" : "danger"}">${output.status === "pass" ? "✓ AI 质检通过" : "! 需要修复"}</span><strong>${escapeHtml(output.name)}</strong><small>${escapeHtml(output.issue)}</small></div>
-      <div class="batch-output-actions"><button data-open-quality-report="${output.id}">${output.status === "pass" ? "查看报告" : "定位问题"}</button><button class="asset-delete" data-delete-output="${output.id}" aria-label="删除${escapeHtml(output.name)}">删除</button></div>
+      <div class="batch-output-copy"><span class="status-pill ${output.status === "ready_100" ? "success" : "processing"}">${output.status === "ready_100" ? "✓ 可投放" : "! 已生成 · 待修改"}</span><strong>${escapeHtml(output.name)} · ${output.score}分</strong><small>${escapeHtml(output.issue)}</small></div>
+      <div class="batch-output-actions"><button data-open-quality-report="${output.id}">${output.status === "ready_100" ? "查看报告" : "查看问题"}</button><button class="asset-delete" data-delete-output="${output.id}" aria-label="删除${escapeHtml(output.name)}">删除</button></div>
     </article>`).join("");
   list.querySelectorAll("[data-open-quality-report]").forEach((button) => button.addEventListener("click", () => openQualityReport(button.dataset.openQualityReport)));
   list.querySelectorAll("[data-delete-output]").forEach((button) => button.addEventListener("click", () => {
@@ -1130,29 +1335,28 @@ function openQualityReport(id) {
   const output = appState.outputs.find((item) => item.id === id);
   if (!output) return;
   appState.currentReportOutputId = id;
-  document.querySelector("#aiReportTitle").textContent = `${output.name} · ${output.status === "pass" ? "AI 质检通过" : "需要修复"}`;
+  document.querySelector("#aiReportTitle").textContent = `${output.name} · ${output.status === "ready_100" ? "可投放" : "已生成，待修改"}`;
   document.querySelector("#aiReportMeta").textContent = `1080×1920 · 9:16 · ${output.duration}`;
   document.querySelector("#aiReportScore").textContent = output.score;
   document.querySelector("#aiReportChecks").innerHTML = output.checks.map((check) => `<div class="report-check-row ${check.passed ? "" : "is-risk"}"><span>${check.passed ? "✓" : "!"}</span><span><strong>${escapeHtml(check.name)}</strong><small>${escapeHtml(check.detail)}</small></span><b>${check.passed ? "通过" : "复核"}</b></div>`).join("");
-  document.querySelector("#fixCurrentOutput").hidden = output.status === "pass";
+  document.querySelector("#fixCurrentOutput").hidden = output.status === "ready_100" || !output.repairActions?.length;
   document.querySelector("#aiReportDialog").showModal();
 }
 
 function repairOutput(output) {
-  output.status = "pass";
-  output.score = 95;
-  output.issue = "风险表达或画面匹配问题已修复并重新检查通过。";
-  output.checks = output.checks.map((check) => ({ ...check, passed: true, detail: check.passed ? check.detail : "已修复并重新检查通过" }));
+  output.status = "repair_required";
+  output.issue = "已生成修改建议；调整后重新检查，通过投放标准即可进入可投放目录。";
 }
 
 function renderExportJobs() {
   const list = document.querySelector("#exportJobList");
-  if (!appState.outputs.length) {
+  const readyOutputs = appState.outputs.filter((output) => output.status === "ready_100");
+  if (!readyOutputs.length) {
     list.innerHTML = '<div class="quality-empty"><span>AI</span><h3>还没有可导出的成片</h3><p>先完成混剪与 AI 质检，通过后才会出现在这里。</p><button class="button primary" data-route="editing">返回成片生产台</button></div>';
     list.querySelector("[data-route]").addEventListener("click", () => navigate("editing"));
     return;
   }
-  list.innerHTML = appState.outputs.map((output) => `
+  list.innerHTML = readyOutputs.map((output) => `
     <article class="export-job is-done">
       <div class="export-thumb"><img src="${output.image}" alt="${escapeHtml(output.name)}封面"><span>${output.duration}</span></div>
       <div class="export-copy"><span class="status-pill success">✓ AI 质检通过</span><h3>${escapeHtml(output.name)}</h3><p>1080×1920 · 9:16 · H.264 · 刚刚</p><div class="quality-mini-tags"><span>千问画文检查</span><span>音轨存在</span><span>风险词通过</span><span>平台规格通过</span></div><div class="job-actions"><button data-toast="将在资源管理器中定位成片文件">打开文件位置</button><button data-export-report="${output.id}">查看质检报告</button><button data-open-dialog="previewDialog">播放成片</button><button class="asset-delete" data-delete-export-output="${output.id}">删除</button></div></div>
@@ -1178,6 +1382,7 @@ document.querySelectorAll("[data-production-step]").forEach((button) => button.a
 document.querySelectorAll("[data-go-production-step]").forEach((button) => button.addEventListener("click", () => setProductionStep(button.dataset.goProductionStep)));
 document.querySelectorAll("[data-ai-voice]").forEach((button) => button.addEventListener("click", () => {
   appState.selectedAiVoice = button.dataset.aiVoice;
+  appState.voicePreviewApproved = false;
   document.querySelectorAll("[data-ai-voice]").forEach((item) => item.classList.toggle("is-selected", item === button));
   renderEditing();
   showToast(`正在试听：${appState.selectedAiVoice}`);
@@ -1200,31 +1405,24 @@ document.querySelector("#decreaseOutputCount").addEventListener("click", () => s
 document.querySelector("#increaseOutputCount").addEventListener("click", () => setOutputCount(appState.outputCount + 1));
 document.querySelector("#outputCountInput").addEventListener("change", (event) => setOutputCount(event.target.value));
 document.querySelector("#repairAllOutputs").addEventListener("click", () => {
-  const risky = appState.outputs.filter((output) => output.status === "risk");
+  const risky = appState.outputs.filter((output) => output.status !== "ready_100");
   if (!risky.length) { showToast(appState.outputs.length ? "当前没有需要修复的风险项" : "还没有生成成片", !appState.outputs.length); return; }
-  runProgress("正在修复并重新检查", "替换风险表达、重选匹配画面并重新执行四项检查…", () => {
-    risky.forEach(repairOutput);
-    renderBatchOutputs();
-    showToast(`${risky.length} 条成片已修复并通过 AI 质检`);
-  });
+  setProductionStep(4);
+  showToast(`已整理 ${risky.length} 条成片的修复动作；调整后重新生成并执行十二项检查`);
 });
 document.querySelector("#fixCurrentOutput").addEventListener("click", () => {
   const output = appState.outputs.find((item) => item.id === appState.currentReportOutputId);
   if (!output) return;
   document.querySelector("#aiReportDialog").close();
-  runProgress("正在修复当前成片", "定位风险时间点并重新匹配画面与口播…", () => {
-    repairOutput(output);
-    renderBatchOutputs();
-    showToast("当前成片已修复并重新检查通过");
-  });
+  setProductionStep(4);
+  showToast(output.repairActions?.[0]?.label || "请按报告修改后重新检查；当前候选成片已保留");
 });
 document.querySelector("#exportPassedOutputs").addEventListener("click", () => {
-  if (!appState.outputs.length) { showToast("请先生成并完成 AI 质检", true); return; }
-  const riskCount = appState.outputs.filter((output) => output.status !== "pass").length;
-  if (riskCount) { showToast(`还有 ${riskCount} 条成片未通过，不能导出`, true); return; }
+  const readyCount = appState.outputs.filter((output) => output.status === "ready_100").length;
+  if (!readyCount) { showToast("候选成片已保留，当前还没有可投放成片", true); return; }
   renderExportJobs();
   navigate("export");
-  showToast(`已导出 ${appState.outputs.length} 条 1080×1920 千川成片`);
+  showToast(`通过发布前检查的目录中共有 ${readyCount} 条成片`);
 });
 
 function getAvailablePickerMaterials() {
@@ -1339,16 +1537,20 @@ document.querySelector("#startConnectedMix").addEventListener("click", () => {
   if (window.caiku) return;
   const script = appState.scripts.find((item) => item.id === appState.editingScriptId);
   const needsVoice = Boolean(script && script.voiceMode !== "music_only" && script.blocks.some((block) => block.voiceEnabled !== false));
-  if (!script || !appState.editingMaterialIds.length || !appState.editingPlan?.confirmed || isEditingPlanStale() || (needsVoice && !appState.selectedAiVoice && !appState.voices.length) || !appState.music.length) {
-    showToast(needsVoice ? "请补齐并确认素材、脚本、AI 剪辑方案、口播声音和音乐" : "请补齐并确认素材、脚本、AI 剪辑方案和音乐", true);
+  const musicOnly = script?.voiceMode === "music_only";
+  const hasMusicFile = appState.music.some((item) => Boolean(item?.filePath));
+  if (!script || !appState.editingMaterialIds.length || !appState.editingPlan?.confirmed || isEditingPlanStale() || (needsVoice && !appState.selectedAiVoice && !appState.voices.length)) {
+    showToast("请补齐并确认素材、脚本和 AI 剪辑方案", true);
     return;
   }
+  if (musicOnly && !hasMusicFile) showToast("尚未添加音乐，将先生成静音候选，结果标为待补音乐");
   runProgress("正在混剪并逐条 AI 质检", `生成 ${appState.outputCount} 条差异化成片，并检查画文、音轨模式、风险词和平台规格…`, () => {
     appState.outputs = Array.from({ length: appState.outputCount }, (_, index) => createQualityOutput(index));
     appState.productionStep = 5;
     renderEditing();
-    showMixCompleteDialog(`D:\\抖音素材库\\${currentBatchLabel.textContent.split(" · ")[0]}\\成片`, appState.outputs.length, 0);
-    showToast(`${appState.outputCount} 条成片已生成，AI 质检发现 ${appState.outputs.filter((item) => item.status === "risk").length} 条需要修复`);
+    const readyCount = appState.outputs.filter((item) => item.status === "ready_100").length;
+    showMixCompleteDialog(`D:\\抖音素材库\\${currentBatchLabel.textContent.split(" · ")[0]}\\成片`, readyCount, appState.outputs.length - readyCount);
+    showToast(`${appState.outputCount} 条候选成片已生成；${readyCount} 条可投放，${appState.outputs.length - readyCount} 条待修改`);
   });
 });
 
@@ -1375,16 +1577,52 @@ document.querySelectorAll("#planWithAiEditor, #replanWithAiEditor").forEach((but
   showToast("已生成交互预览方案；桌面版将使用本机 Qwen");
 }));
 
-document.querySelector("#confirmAiEditorPlan").addEventListener("click", () => {
-  if (!appState.editingPlan || appState.editingPlan.status === "blocked" || isEditingPlanStale()) {
-    showToast("当前计划不能确认，请重新安排", true);
+document.querySelector("#confirmAiEditorPlan").addEventListener("click", async () => {
+  if (!appState.editingPlan || isEditingPlanStale() || !Array.isArray(appState.editingPlan.decisions) || !appState.editingPlan.decisions.length) {
+    showToast("当前计划没有剪辑段落，请重新安排", true);
     return;
   }
   appState.editingPlan.confirmed = true;
+  appState.editingPlan.rejected = false;
   appState.editingPlan.confirmedAt = new Date().toISOString();
+  if (window.caiku?.recordEditingFeedback) {
+    const learnedCaseId = appState.editingPlan.retrieval?.matches?.[0]?.caseId;
+    await window.caiku.recordEditingFeedback({
+      caseId: learnedCaseId || `plan-${appState.editingPlan.id}`,
+      planId: appState.editingPlan.id,
+      action: "accept",
+      rating: 5,
+      reason: "用户确认采用逐句剪辑安排",
+      after: { decisions: appState.editingPlan.decisions, narrativeContinuity: appState.editingPlan.narrativeContinuity }
+    }).catch((error) => showToast(error.message || "采用反馈保存失败", true));
+  }
   renderEditing();
   window.caikuScheduleProjectSave?.();
-  showToast("已确认 AI 剪辑方案，可以开始生成");
+  showToast(appState.editingPlan.status === "ready" ? "已确认 AI 剪辑方案，可以开始生成" : "已确认先生成候选，风险项将在成片报告中继续处理");
+});
+
+document.querySelector("#rejectAiEditorPlan").addEventListener("click", async () => {
+  const plan = appState.editingPlan;
+  if (!plan || plan.confirmed) return;
+  const reason = window.prompt("请写下拒绝原因，剪辑智能体下次会避开同类问题：", "选镜或段落逻辑不符合预期");
+  if (reason === null) return;
+  plan.rejected = true;
+  plan.confirmed = false;
+  plan.rejectedAt = new Date().toISOString();
+  if (window.caiku?.recordEditingFeedback) {
+    const learnedCaseId = plan.retrieval?.matches?.[0]?.caseId;
+    await window.caiku.recordEditingFeedback({
+      caseId: learnedCaseId || `plan-${plan.id}`,
+      planId: plan.id,
+      action: "reject",
+      rating: 1,
+      reason: reason || "用户拒绝这份剪辑安排",
+      before: { decisions: plan.decisions, narrativeContinuity: plan.narrativeContinuity }
+    }).catch((error) => showToast(error.message || "拒绝反馈保存失败", true));
+  }
+  renderEditing();
+  window.caikuScheduleProjectSave?.();
+  showToast("已记录拒绝原因，请点击重新安排");
 });
 
 document.querySelector("#viewMixReports").addEventListener("click", () => {
@@ -1405,15 +1643,30 @@ function getActiveScript() {
 function renderCompetitorAnalyses() {
   const list = document.querySelector("#competitorAnalysisList");
   if (!appState.competitorAnalyses.length) {
-    list.innerHTML = '<div class="competitor-empty"><strong>还没有竞品视频</strong><small>添加后再开始视觉结构分析；未配置千问时会明确阻止，不生成假结果。</small></div>';
+    list.innerHTML = '<div class="competitor-empty"><strong>还没有投喂参考视频</strong><small>只分析你主动添加的文件；系统不会联网寻找或下载市场视频。</small></div>';
     return;
   }
-  list.innerHTML = appState.competitorAnalyses.map((item) => `<article class="competitor-task is-${item.status}">
-    <span class="competitor-file-icon">竞</span><span><strong>${escapeHtml(item.name)}</strong><small>${item.status === "ready" ? "等待开始分析" : item.status === "processing" ? "正在识别镜头、可见文字与节奏" : item.status === "done" ? `已生成脚本草稿 · ${escapeHtml(item.scriptName || "未命名")}` : escapeHtml(item.error || "分析失败")}</small></span>
-    ${item.status === "ready" || item.status === "failed" ? `<button class="button secondary" data-analyze-competitor="${item.id}">${item.status === "failed" ? "重试" : "开始分析"}</button>` : item.status === "processing" ? '<span class="status-pill processing">分析中</span>' : `<button class="button secondary" data-open-competitor-script="${item.scriptId}">编辑脚本</button>`}
-    <button class="asset-delete" data-delete-competitor="${item.id}" aria-label="删除竞品分析记录${escapeHtml(item.name)}">删除记录</button>
-  </article>`).join("");
+  list.innerHTML = appState.competitorAnalyses.map((item) => {
+    const recipe = item.learningRecipe || {};
+    const tags = [recipe.hook?.type ? `钩子 ${recipe.hook.type}` : "", ...(recipe.editingTechniques || []).slice(0, 3)].filter(Boolean);
+    const statusCopy = item.status === "ready" ? "等待开始分析"
+      : item.status === "processing" ? "正在识别钩子、镜头角色、切点、口播与节奏"
+        : item.status === "paused" ? "已暂停 · 点击继续会从头安全重跑本次分析"
+          : item.status === "done" ? `${item.gold ? "金标案例" : "已生成可编辑脚本"} · ${item.scriptName || "未命名"}`
+            : item.error || "分析失败";
+    let actions = "";
+    if (["ready", "failed", "paused"].includes(item.status)) actions += `<button class="button secondary" data-analyze-competitor="${item.id}">${item.status === "ready" ? "开始分析" : item.status === "paused" ? "继续" : "重试"}</button>`;
+    if (item.status === "processing") actions += `<button class="button secondary" data-pause-market-script="${item.id}">暂停</button><span class="status-pill processing">分析中</span>`;
+    if (item.status === "done") actions += `<button class="button secondary" data-open-competitor-script="${item.scriptId}">编辑脚本</button>${item.gold ? '<span class="status-pill success">金标</span>' : `<button class="button secondary" data-mark-market-gold="${item.id}">设为金标</button>`}`;
+    actions += `<button class="asset-delete" data-delete-competitor="${item.id}" aria-label="删除市场脚本学习记录${escapeHtml(item.name)}">删除</button>`;
+    return `<article class="competitor-task is-${item.status} ${item.gold ? "is-gold" : ""}">
+      <span class="competitor-file-icon">学</span><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(statusCopy)}</small>${tags.length ? `<div class="competitor-recipe-tags">${tags.map((tag) => `<i>${escapeHtml(tag)}</i>`).join("")}</div>` : ""}</span>
+      <span class="competitor-task-actions">${actions}</span>
+    </article>`;
+  }).join("");
   list.querySelectorAll("[data-analyze-competitor]").forEach((button) => button.addEventListener("click", () => analyzeCompetitor(button.dataset.analyzeCompetitor)));
+  list.querySelectorAll("[data-pause-market-script]").forEach((button) => button.addEventListener("click", () => pauseMarketScript(button.dataset.pauseMarketScript)));
+  list.querySelectorAll("[data-mark-market-gold]").forEach((button) => button.addEventListener("click", () => markMarketScriptGold(button.dataset.markMarketGold)));
   list.querySelectorAll("[data-open-competitor-script]").forEach((button) => button.addEventListener("click", () => {
     appState.activeManagedScriptId = button.dataset.openCompetitorScript;
     renderManagedScripts();
@@ -1421,11 +1674,16 @@ function renderCompetitorAnalyses() {
   }));
   list.querySelectorAll("[data-delete-competitor]").forEach((button) => button.addEventListener("click", () => {
     const item = appState.competitorAnalyses.find((record) => record.id === button.dataset.deleteCompetitor);
-    askConfirm(`删除竞品分析记录“${item?.name || "未命名"}”？`, "只移除分析记录和源视频引用，不删除你磁盘上的竞品原文件；已生成脚本仍单独保留。", () => {
+    askConfirm(`删除市场脚本学习记录“${item?.name || "未命名"}”？`, "案例会进入训练库回收记录；不会删除你磁盘上的参考原文件，已生成脚本仍单独保留。", async () => {
+      if (item?.status === "processing") await pauseMarketScript(item.id);
+      if (item?.trainingCaseId && window.caiku?.deleteEditingTrainingCase) {
+        try { await window.caiku.deleteEditingTrainingCase(item.trainingCaseId, "用户删除市场脚本学习记录"); }
+        catch (error) { showToast(error.message || "训练案例删除失败", true); return; }
+      }
       appState.competitorAnalyses = appState.competitorAnalyses.filter((record) => record.id !== button.dataset.deleteCompetitor);
       renderCompetitorAnalyses();
       window.caikuScheduleProjectSave?.();
-      showToast("竞品分析记录已删除，原视频文件仍保留");
+      showToast("学习记录已删除，参考原视频文件仍保留");
     });
   }));
 }
@@ -1435,13 +1693,13 @@ async function addCompetitorPaths(paths) {
   let addedCount = 0;
   videoPaths.forEach((filePath) => {
     if (appState.competitorAnalyses.some((item) => item.filePath === filePath)) return;
-    appState.competitorAnalyses.push({ id: `competitor-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: filePath.split(/[\\/]/).pop(), filePath, status: "ready" });
+    appState.competitorAnalyses.push({ id: `market-reference-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: filePath.split(/[\\/]/).pop(), filePath, status: "ready", sourceType: "user_uploaded_reference" });
     addedCount += 1;
   });
   renderCompetitorAnalyses();
   window.caikuScheduleProjectSave?.();
-  if (addedCount) showToast(`已添加 ${addedCount} 个竞品视频，可开始 AI 分析`);
-  else if ((paths || []).length) showToast(videoPaths.length ? "这些竞品视频已经添加" : "请拖入 MP4、MOV、MKV、M4V 或 WebM 视频", true);
+  if (addedCount) showToast(`已添加 ${addedCount} 个参考视频，可开始学习剪辑结构`);
+  else if ((paths || []).length) showToast(videoPaths.length ? "这些参考视频已经添加" : "请拖入 MP4、MOV、MKV、M4V 或 WebM 视频", true);
   return addedCount;
 }
 
@@ -1464,48 +1722,89 @@ async function chooseCompetitorVideo() {
 async function analyzeCompetitor(id) {
   const record = appState.competitorAnalyses.find((item) => item.id === id);
   if (!record) return;
-  if (!window.caiku?.analyzeCompetitor) { showToast("竞品 AI 分析只在裁库桌面版中可用", true); return; }
+  if (!window.caiku?.analyzeMarketScript && !window.caiku?.analyzeCompetitor) { showToast("市场脚本学习只在裁库桌面版中可用", true); return; }
+  record.taskId = `market-script-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  record.pauseRequested = false;
   record.status = "processing";
   record.error = "";
   renderCompetitorAnalyses();
   try {
-    const result = await window.caiku.analyzeCompetitor(record.filePath);
-    const scriptId = `s-competitor-${Date.now()}`;
+    const sku = appState.materials.find((material) => appState.editingMaterialIds.includes(material.id))?.sku || appState.materials[0]?.sku || "";
+    const result = window.caiku.analyzeMarketScript
+      ? await window.caiku.analyzeMarketScript({ filePath: record.filePath, clientTaskId: record.taskId, referenceId: record.id, sku, category: "服装带货" })
+      : await window.caiku.analyzeCompetitor(record.filePath);
+    if (record.pauseRequested) return;
+    const recipe = result.learningRecipe || {};
+    const categoryLabels = { outfit: "人物穿搭", overall: "整体展示", detail: "细节讲解", review: "测评对比", action: "动作展示", speech: "口播", upper_related: "上衣相关", other: "其他" };
+    const recipeBlocks = (recipe.blocks || result.blocks || []).map((block) => ({ ...block, type: block.materialType || block.type || "other", category: categoryLabels[block.materialType || block.type] || "其他", text: block.voiceText || block.subtitleText || block.name || "" }));
+    const scriptId = record.scriptId || `s-market-${Date.now()}`;
     const script = normalizeScript({
       id: scriptId,
-      name: result.title || `${record.name} · 竞品结构`,
-      duration: Math.max(2, Math.round(Number(result.duration || 30))),
-      voiceMode: result.voiceMode || "partial_voice",
-      sourceType: "competitor_analysis",
+      name: recipe.title || result.title || `${record.name} · 市场结构`,
+      duration: Math.max(2, Math.round(Number(recipe.duration || result.duration || 30))),
+      voiceMode: recipe.voiceMode || result.voiceMode || "partial_voice",
+      sourceType: "user_uploaded_market_script",
       sourceAnalysisId: record.id,
       editingRecipe: {
+        ...recipe,
         sourceAnalysisId: record.id,
         sourceFileName: record.name,
-        sourceDuration: Number(result.duration || 0),
-        summary: result.summary || "",
-        patterns: result.editingPattern || [],
+        sourceDuration: Number(recipe.duration || result.duration || 0),
+        summary: recipe.summary || result.summary || "",
+        patterns: recipe.editingTechniques || result.editingPattern || [],
         visibleTexts: result.visibleTexts || []
       },
-      blocks: result.blocks || []
+      blocks: recipeBlocks
     });
-    appState.scripts.push(script);
+    const existingIndex = appState.scripts.findIndex((item) => item.id === scriptId);
+    if (existingIndex >= 0) appState.scripts.splice(existingIndex, 1, script);
+    else appState.scripts.push(script);
     appState.activeManagedScriptId = scriptId;
     record.status = "done";
     record.scriptId = scriptId;
     record.scriptName = script.name;
-    record.summary = result.summary || "";
+    record.summary = recipe.summary || result.summary || "";
+    record.learningRecipe = recipe;
+    record.trainingCaseId = result.trainingCase?.caseId || record.trainingCaseId;
     renderCompetitorAnalyses();
     renderManagedScripts();
     renderScriptEditor();
     renderEditing();
     window.caikuScheduleProjectSave?.();
-    showToast("竞品视觉结构已生成可编辑脚本草稿");
+    showToast("参考视频已生成可编辑剪辑配方；确认满意后可设为金标");
   } catch (error) {
-    record.status = "failed";
-    record.error = error.message || "竞品分析失败";
+    record.status = record.pauseRequested || ["ABORT_ERR", "TASK_CANCELLED"].includes(error.code) ? "paused" : "failed";
+    record.error = record.status === "paused" ? "已暂停" : error.message || "市场脚本分析失败";
     renderCompetitorAnalyses();
     window.caikuScheduleProjectSave?.();
     showToast(record.error, true);
+  }
+}
+
+async function pauseMarketScript(id) {
+  const record = appState.competitorAnalyses.find((item) => item.id === id);
+  if (!record || record.status !== "processing") return;
+  record.pauseRequested = true;
+  record.status = "paused";
+  renderCompetitorAnalyses();
+  if (record.taskId && window.caiku?.cancelTask) await window.caiku.cancelTask(record.taskId).catch(() => false);
+  window.caikuScheduleProjectSave?.();
+  showToast("分析已暂停，点击继续会重新开始该视频的结构分析");
+}
+
+async function markMarketScriptGold(id) {
+  const record = appState.competitorAnalyses.find((item) => item.id === id);
+  const script = appState.scripts.find((item) => item.id === record?.scriptId);
+  if (!record?.trainingCaseId || !script || !window.caiku?.markEditingTrainingCaseGold) { showToast("请先完成分析并保存脚本", true); return; }
+  try {
+    const saved = await window.caiku.markEditingTrainingCaseGold({ caseId: record.trainingCaseId, script, learningRecipe: script.editingRecipe, reason: "用户编辑后设为金标" });
+    record.gold = true;
+    record.trainingCaseVersion = saved.version;
+    renderCompetitorAnalyses();
+    window.caikuScheduleProjectSave?.();
+    showToast("已设为 5 星金标案例，后续只复用剪辑结构和切法");
+  } catch (error) {
+    showToast(error.message || "设为金标失败", true);
   }
 }
 
@@ -1514,10 +1813,10 @@ document.querySelector("#addCompetitorButton").addEventListener("click", () => {
   panel.hidden = !panel.hidden;
   if (!panel.hidden) renderCompetitorAnalyses();
 });
-document.querySelector("#chooseCompetitorVideo").addEventListener("click", () => chooseCompetitorVideo().catch((error) => showToast(error.message || "选择竞品视频失败", true)));
+document.querySelector("#chooseCompetitorVideo").addEventListener("click", () => chooseCompetitorVideo().catch((error) => showToast(error.message || "选择参考视频失败", true)));
 const competitorDropZone = document.querySelector("#competitorDropZone");
 let competitorDragDepth = 0;
-competitorDropZone.addEventListener("click", () => chooseCompetitorVideo().catch((error) => showToast(error.message || "选择竞品视频失败", true)));
+competitorDropZone.addEventListener("click", () => chooseCompetitorVideo().catch((error) => showToast(error.message || "选择参考视频失败", true)));
 competitorDropZone.addEventListener("dragenter", (event) => {
   event.preventDefault();
   competitorDragDepth += 1;
@@ -1608,7 +1907,7 @@ function renderScriptEditorV12() {
   if (script.editingRecipe) {
     const patterns = Array.isArray(script.editingRecipe.patterns) ? script.editingRecipe.patterns.slice(0, 4) : [];
     recipeSummary.hidden = false;
-    recipeSummary.innerHTML = `<span>对标思路</span><div><strong>${escapeHtml(script.editingRecipe.sourceFileName || "竞品视频分析")}</strong><small>${escapeHtml(script.editingRecipe.summary || "已保存镜头角色、节奏与转场思路")}</small>${patterns.length ? `<div>${patterns.map((item) => `<i>${escapeHtml(item)}</i>`).join("")}</div>` : ""}</div>`;
+    recipeSummary.innerHTML = `<span>学习配方</span><div><strong>${escapeHtml(script.editingRecipe.sourceFileName || "用户投喂视频分析")}</strong><small>${escapeHtml(script.editingRecipe.summary || "已保存钩子、镜头角色、切点、节奏与转场思路")}</small>${patterns.length ? `<div>${patterns.map((item) => `<i>${escapeHtml(item)}</i>`).join("")}</div>` : ""}</div>`;
   } else {
     recipeSummary.hidden = true;
     recipeSummary.innerHTML = "";
@@ -1832,7 +2131,7 @@ document.querySelectorAll("[data-settings-tab]").forEach((button) => {
     document.querySelectorAll("[data-settings-tab]").forEach((item) => item.classList.toggle("is-active", item === button));
     document.querySelectorAll("[data-settings-pane]").forEach((pane) => pane.classList.toggle("is-active", pane.dataset.settingsPane === button.dataset.settingsTab));
     const settingsFooter = document.querySelector("#settingsFooter");
-    settingsFooter.hidden = ["ai-review", "performance", "export", "updates"].includes(button.dataset.settingsTab);
+    settingsFooter.hidden = ["ai-review", "performance", "export", "updates"].includes(button.dataset.settingsTab) || button.dataset.settingsTab === "product";
   });
 });
 document.querySelector("#saveSettingsButton").addEventListener("click", () => {
@@ -1857,7 +2156,12 @@ const requestedStep = Number(reviewParams.get("step"));
 const requestedDemo = reviewParams.get("demo");
 if (requestedDemo === "review" || requestedDemo === "pass") {
   appState.outputs = Array.from({ length: 4 }, (_, index) => createQualityOutput(index));
-  if (requestedDemo === "pass") appState.outputs.forEach(repairOutput);
+  if (requestedDemo === "pass") appState.outputs.forEach((output) => {
+    output.status = "ready_100";
+    output.score = 100;
+    output.issue = "十二项发布门槛全部通过，可以进入可投放目录。";
+    output.checks.forEach((check) => { check.passed = true; });
+  });
   renderEditing();
   if (requestedModule === "export") renderExportJobs();
 }
