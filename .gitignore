@@ -2,6 +2,7 @@
 node_modules/
 release/
 release-final/
+release-full-runtime/
 output/
 .playwright-cli/
 
@@ -23,6 +24,10 @@ caiku-state.json
 
 # Bundled third-party binaries (included in Release installers)
 vendor/ffmpeg/*.exe
+vendor/caption-runtime/
+vendor/caption-runtime-full/
+vendor/caption-models/
+vendor/pip-cache/
 
 # Operating system and editor files
 .DS_Store

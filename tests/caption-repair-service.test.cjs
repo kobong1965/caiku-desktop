@@ -1,6 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { complementTimedRanges, manualZonesFromAudit, manualZonesFromRegions, parseLastJsonLine, planHighDifficultyCaptionRepair, pythonCandidates, rangeString } = require("../electron/services/caption-repair-service.cjs");
+const fs = require("node:fs/promises");
+const os = require("node:os");
+const path = require("node:path");
+const { bundledPythonCandidates, complementTimedRanges, inspectCaptionRepairRuntime, manualZonesFromAudit, manualZonesFromRegions, modelCandidates, parseLastJsonLine, planHighDifficultyCaptionRepair, pythonCandidates, rangeString, repairCaptionRanges } = require("../electron/services/caption-repair-service.cjs");
 
 test("字幕修复时间段按毫秒精度传给逐帧引擎", () => {
   assert.equal(rangeString([{ start: 1.2345, end: 4.5678 }, { start: 8, duration: 2 }]), "1.234-4.568,8.000-10.000");
@@ -35,6 +38,55 @@ test("优先使用用户设置或裁库专用 Python", () => {
   const candidates = pythonCandidates({ pythonPath: "D:/caption/python.exe" });
   assert.equal(candidates[0].command, "D:/caption/python.exe");
   assert.ok(candidates.some((item) => item.command === "python"));
+});
+
+test("打包后优先使用安装包内置字幕修复运行时", () => {
+  const resourcesPath = "C:/Users/demo/AppData/Local/Programs/caiku-desktop/resources";
+  const bundled = bundledPythonCandidates({ resourcesPath });
+  assert.equal(bundled[0].replaceAll("\\", "/"), "C:/Users/demo/AppData/Local/Programs/caiku-desktop/resources/caption-runtime/python.exe");
+  const candidates = pythonCandidates({}, { resourcesPath });
+  assert.equal(candidates[0].command.replaceAll("\\", "/"), bundled[0].replaceAll("\\", "/"));
+  assert.equal(candidates[1].command.replaceAll("\\", "/"), "C:/Users/demo/AppData/Local/Programs/caiku-desktop/resources/caption-runtime/Scripts/python.exe");
+});
+
+test("坏 Python 不会阻止后续内置字幕修复运行时被选中", async () => {
+  const resourcesPath = "C:/Programs/caiku/resources";
+  const calls = [];
+  const result = await inspectCaptionRepairRuntime({}, {
+    resourcesPath,
+    runProcessImpl: async (command) => {
+      calls.push(command);
+      if (command.replaceAll("\\", "/").endsWith("/caption-runtime/python.exe")) {
+        return { stdout: "{\"python\":true,\"opencv\":false,\"lama\":false,\"torch\":false,\"opencvError\":\"No module named cv2\"}\n" };
+      }
+      return { stdout: "{\"python\":true,\"opencv\":true,\"lama\":true,\"torch\":true,\"cuda\":false}\n" };
+    }
+  });
+  assert.equal(result.repairAvailable, true);
+  assert.equal(result.command.replaceAll("\\", "/"), "C:/Programs/caiku/resources/caption-runtime/Scripts/python.exe");
+  assert.equal(calls.length, 2);
+});
+
+test("字幕补画优先使用安装包内置 LaMa 模型", async (t) => {
+  const resourcesPath = await fs.mkdtemp(path.join(os.tmpdir(), "caiku-caption-model-"));
+  t.after(() => fs.rm(resourcesPath, { recursive: true, force: true }));
+  await fs.mkdir(path.join(resourcesPath, "caption-models"), { recursive: true });
+  await fs.writeFile(path.join(resourcesPath, "caption-models", "big-lama.pt"), "fixture");
+  const expectedModel = modelCandidates("big-lama.pt", { resourcesPath })[0];
+  const calls = [];
+  await repairCaptionRanges("input.mp4", "output.mp4", [{ start: 0, end: 2 }], {
+    repairAvailable: true,
+    command: "python",
+    argsPrefix: []
+  }, {
+    resourcesPath,
+    runProcessImpl: async (command, args, options) => {
+      calls.push({ command, args, env: options.env });
+      return { stdout: "" };
+    }
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].env.LAMA_MODEL, expectedModel);
 });
 
 test("能力探测能忽略日志并读取最后一行 JSON", () => {

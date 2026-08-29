@@ -1,6 +1,6 @@
 {
   "name": "caiku-desktop",
-  "version": "0.1.28",
+  "version": "0.1.29",
   "private": true,
   "description": "裁库 - 抖音带货素材拆分、管理、混剪与发布前质检桌面软件",
   "main": "electron/main.cjs",
@@ -40,6 +40,23 @@
         "filter": [
           "ffmpeg.exe",
           "ffprobe.exe"
+        ]
+      },
+      {
+        "from": "vendor/caption-runtime-full",
+        "to": "caption-runtime",
+        "filter": [
+          "**/*",
+          "!**/__pycache__/**",
+          "!**/*.pyc",
+          "!_wheel_meta/**"
+        ]
+      },
+      {
+        "from": "vendor/caption-models",
+        "to": "caption-models",
+        "filter": [
+          "big-lama.pt"
         ]
       },
       {

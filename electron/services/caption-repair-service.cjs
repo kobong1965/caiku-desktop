@@ -18,9 +18,39 @@ function resolveScript(name, options = {}) {
   return script;
 }
 
-function pythonCandidates(settings = {}) {
+function modelCandidates(name, options = {}) {
+  const candidates = [];
+  if (options.resourcesPath) candidates.push(path.join(options.resourcesPath, "caption-models", name));
+  if (process.resourcesPath) candidates.push(path.join(process.resourcesPath, "caption-models", name));
+  candidates.push(path.resolve(__dirname, "..", "..", "vendor", "caption-models", name));
+  return [...new Set(candidates)];
+}
+
+function resolveModel(name, options = {}) {
+  return modelCandidates(name, options).find((candidate) => fsSync.existsSync(candidate)) || null;
+}
+
+function bundledPythonCandidates(options = {}) {
+  const candidates = [];
+  if (options.resourcesPath) {
+    candidates.push(path.join(options.resourcesPath, "caption-runtime", "python.exe"));
+    candidates.push(path.join(options.resourcesPath, "caption-runtime", "Scripts", "python.exe"));
+  }
+  if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, "caption-runtime", "python.exe"));
+    candidates.push(path.join(process.resourcesPath, "caption-runtime", "Scripts", "python.exe"));
+  }
+  candidates.push(path.resolve(__dirname, "..", "..", "vendor", "caption-runtime-full", "python.exe"));
+  candidates.push(path.resolve(__dirname, "..", "..", "vendor", "caption-runtime-full", "Scripts", "python.exe"));
+  candidates.push(path.resolve(__dirname, "..", "..", "vendor", "caption-runtime", "Scripts", "python.exe"));
+  candidates.push(path.resolve(__dirname, "..", "..", "vendor", "caption-runtime", "python.exe"));
+  return candidates;
+}
+
+function pythonCandidates(settings = {}, options = {}) {
   const candidates = [
     settings.pythonPath,
+    ...bundledPythonCandidates(options),
     process.env.CAIKU_CAPTION_PYTHON,
     process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, "Caiku", "caption-runtime", "Scripts", "python.exe"),
     path.join(os.tmpdir(), "caiku-video-cu130-env", "Scripts", "python.exe"),
@@ -49,12 +79,13 @@ async function inspectCaptionRepairRuntime(settings = {}, options = {}) {
     "print(json.dumps(result,ensure_ascii=False))"
   ].join("\n");
   const failures = [];
-  for (const candidate of pythonCandidates(settings)) {
+  let bestCapability = null;
+  for (const candidate of pythonCandidates(settings, options)) {
     try {
       const result = await run(candidate.command, [...candidate.argsPrefix, "-c", code], { signal: options.signal, maxBuffer: 1024 * 1024 });
       const capability = parseLastJsonLine(result.stdout);
       if (!capability?.python) throw new Error("Python 未返回能力信息");
-      return {
+      const normalized = {
         ...capability,
         command: candidate.command,
         argsPrefix: candidate.argsPrefix,
@@ -62,9 +93,18 @@ async function inspectCaptionRepairRuntime(settings = {}, options = {}) {
         repairAvailable: capability.opencv === true && capability.lama === true,
         acceleration: capability.cuda ? "cuda" : "cpu"
       };
+      if (normalized.repairAvailable) return normalized;
+      if (!bestCapability || (normalized.auditAvailable && !bestCapability.auditAvailable)) bestCapability = normalized;
+      failures.push(`${candidate.command}: ${[normalized.opencvError, normalized.torchError, normalized.lamaError].filter(Boolean).join("；") || "字幕修复依赖不完整"}`);
     } catch (error) {
       failures.push(`${candidate.command}: ${error.message}`);
     }
+  }
+  if (bestCapability) {
+    return {
+      ...bestCapability,
+      error: failures.join("；").slice(0, 2000)
+    };
   }
   return {
     command: null,
@@ -340,6 +380,7 @@ async function repairCaptionRanges(inputPath, outputPath, ranges, runtime, optio
   if (!runtime?.repairAvailable) throw Object.assign(new Error("本机缺少 OpenCV + LaMa 字幕修复运行环境"), { code: "CAPTION_REPAIR_UNAVAILABLE" });
   const run = options.runProcessImpl || runProcess;
   const script = resolveScript("remove-dynamic-captions.py", options);
+  const lamaModelPath = resolveModel("big-lama.pt", options);
   const args = [
     ...(runtime.argsPrefix || []), script,
     "--input", inputPath,
@@ -366,6 +407,7 @@ async function repairCaptionRanges(inputPath, outputPath, ranges, runtime, optio
   try {
     await run(runtime.command, args, {
       signal: options.signal,
+      env: lamaModelPath ? { LAMA_MODEL: lamaModelPath, PYTHONUTF8: "1" } : { PYTHONUTF8: "1" },
       onStdout: (chunk) => {
         progressBuffer = (progressBuffer + chunk).slice(-4000);
         const matches = [...progressBuffer.matchAll(/progress_frames=(\d+)\s+time=([\d.]+)s/g)];
@@ -386,6 +428,9 @@ module.exports = {
   auditVideoCaptions,
   complementTimedRanges,
   inspectCaptionRepairRuntime,
+  bundledPythonCandidates,
+  modelCandidates,
+  resolveModel,
   manualZonesFromAudit,
   manualZonesFromRegions,
   mergeTimedRanges,

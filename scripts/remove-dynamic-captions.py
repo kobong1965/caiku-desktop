@@ -9,11 +9,41 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 from pathlib import Path
 
 import cv2
 import numpy as np
+
+
+def create_lama_model():
+    model_path = os.environ.get("LAMA_MODEL")
+    if not model_path:
+        from simple_lama_inpainting import SimpleLama
+
+        return SimpleLama()
+
+    import torch
+    from PIL import Image
+    from simple_lama_inpainting.utils.util import prepare_img_and_mask
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    with open(model_path, "rb") as model_file:
+        model = torch.jit.load(model_file, map_location=device)
+    model.eval()
+    model.to(device)
+
+    class LocalSimpleLama:
+        def __call__(self, image: Image.Image | np.ndarray, mask: Image.Image | np.ndarray):
+            prepared_image, prepared_mask = prepare_img_and_mask(image, mask, device)
+            with torch.inference_mode():
+                inpainted = model(prepared_image, prepared_mask)
+                result = inpainted[0].permute(1, 2, 0).detach().cpu().numpy()
+                result = np.clip(result * 255, 0, 255).astype(np.uint8)
+                return Image.fromarray(result)
+
+    return LocalSimpleLama()
 
 
 def _odd(value: int) -> int:
@@ -378,9 +408,7 @@ def process_video(
     encoder = subprocess.Popen(command, stdin=subprocess.PIPE)
     lama = None
     if engine == "lama":
-        from simple_lama_inpainting import SimpleLama
-
-        lama = SimpleLama()
+        lama = create_lama_model()
     if not keep_ranges:
         duration_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
         duration = duration_frames / source_fps if duration_frames else float("inf")
